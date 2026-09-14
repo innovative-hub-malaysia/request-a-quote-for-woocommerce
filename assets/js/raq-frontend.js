@@ -304,7 +304,13 @@
 	}
 
 	function submitForm( $form ) {
-		// Native HTML5 validation first (required fields, valid email, etc.).
+		var $msg = $form.find( '.raq-form__msg' );
+		// Required searchable dropdowns first (hidden inputs skip HTML5 checks).
+		if ( ! ddValidate( $form ) ) {
+			$msg.addClass( 'raq-form__msg--error' ).text( cfg.i18n.chooseRequired || 'Please complete the required fields.' );
+			return;
+		}
+		// Native HTML5 validation next (required fields, valid email, etc.).
 		var formEl = $form.get( 0 );
 		if ( formEl && typeof formEl.checkValidity === 'function' && ! formEl.checkValidity() ) {
 			if ( typeof formEl.reportValidity === 'function' ) {
@@ -314,7 +320,6 @@
 		}
 
 		var $btn = $form.find( '.raq-submit' );
-		var $msg = $form.find( '.raq-form__msg' );
 		$btn.prop( 'disabled', true ).addClass( 'is-busy' );
 		$msg.removeClass( 'raq-form__msg--error' ).text( cfg.i18n.sending );
 
@@ -366,39 +371,190 @@
 	} );
 
 	/* ---------------------------------------------------------------- *
-	 * Country-code dropdown (closed = flag + code, open = country names)
+	 * Searchable dropdown (.raq-dd) - phone country code + Country field.
+	 *
+	 * Markup comes from RAQ_Form::dropdown_html(). Open = show the panel and
+	 * focus its search box; typing filters the options by data-search
+	 * (name + code); Enter/click picks; Esc or an outside click closes. The
+	 * choice lives in the hidden .raq-dd__value input, so the form posts
+	 * exactly what a native <select> would.
 	 * ---------------------------------------------------------------- */
-	$( document ).on( 'click', '.raq-cc__toggle', function ( e ) {
+	function ddClose( $dd ) {
+		$dd.find( '.raq-dd__panel' ).prop( 'hidden', true );
+		$dd.find( '.raq-dd__toggle' ).attr( 'aria-expanded', 'false' );
+		ddCursor( $dd, null );
+	}
+
+	function ddCloseAll() {
+		$( '.raq-dd' ).each( function () {
+			ddClose( $( this ) );
+		} );
+	}
+
+	// Matches at the start of any word, so "ma" finds Malaysia but not Oman or
+	// Germany, and "60" / "+60" find the code. Brackets and slashes count as
+	// word breaks ("uk" finds "United Kingdom (UK)", "ivoire" finds "Côte d'Ivoire").
+	function ddWords( str ) {
+		return ' ' + $.trim( String( str || '' ).toLowerCase().replace( /[()\/\-'&,]/g, ' ' ).replace( /\s+/g, ' ' ) );
+	}
+
+	// The keyboard cursor: one visible row carries .is-active, and the search
+	// box (the focused element) points at it via aria-activedescendant.
+	function ddCursor( $dd, $opt ) {
+		$dd.find( '.raq-dd__opt.is-active' ).removeClass( 'is-active' );
+		var $search = $dd.find( '.raq-dd__search' );
+		if ( ! $opt || ! $opt.length ) {
+			$search.removeAttr( 'aria-activedescendant' );
+			return;
+		}
+		$opt.addClass( 'is-active' );
+		$search.attr( 'aria-activedescendant', $opt.attr( 'id' ) );
+		// Keep the row in view inside the list only - scrollIntoView would
+		// also scroll the page and the drawer.
+		var list = $dd.find( '.raq-dd__list' ).get( 0 );
+		var row = $opt.get( 0 );
+		if ( list && row ) {
+			if ( row.offsetTop < list.scrollTop ) {
+				list.scrollTop = row.offsetTop;
+			} else if ( row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight ) {
+				list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
+			}
+		}
+	}
+
+	// Filter the rows by the query; the cursor lands on $cursor when it is
+	// still visible, else on the first visible row.
+	function ddFilter( $dd, query, $cursor ) {
+		var q = ddWords( query );
+		var shown = 0;
+		$dd.find( '.raq-dd__opt' ).each( function () {
+			var hit = q === ' ' || ddWords( $( this ).attr( 'data-search' ) ).indexOf( q ) !== -1;
+			$( this ).prop( 'hidden', ! hit );
+			if ( hit ) {
+				shown++;
+			}
+		} );
+		$dd.find( '.raq-dd__empty' ).prop( 'hidden', shown > 0 );
+		if ( ! $cursor || ! $cursor.length || $cursor.prop( 'hidden' ) ) {
+			$cursor = $dd.find( '.raq-dd__opt:not([hidden])' ).first();
+		}
+		ddCursor( $dd, $cursor );
+	}
+
+	function ddOpen( $dd ) {
+		ddCloseAll();
+		var $search = $dd.find( '.raq-dd__search' );
+		$search.val( '' );
+		$dd.find( '.raq-dd__panel' ).prop( 'hidden', false );
+		$dd.find( '.raq-dd__toggle' ).attr( 'aria-expanded', 'true' );
+		// The cursor starts on the current choice, not the first row.
+		ddFilter( $dd, '', $dd.find( '.raq-dd__opt.is-selected' ) );
+		$search.trigger( 'focus' );
+	}
+
+	function ddChoose( $dd, $opt ) {
+		var val = String( $opt.attr( 'data-value' ) );
+		$dd.attr( 'data-value', val ).toggleClass( 'is-empty', val === '' );
+		$dd.find( '.raq-dd__value' ).val( val );
+		$dd.find( '.raq-dd__toggle .raq-dd__flag' ).text( $opt.attr( 'data-flag' ) || '' );
+		$dd.find( '.raq-dd__toggle .raq-dd__text' ).text( $opt.attr( 'data-short' ) || $opt.find( '.raq-dd__label' ).text() );
+		$dd.find( '.raq-dd__opt' ).removeClass( 'is-selected' ).attr( 'aria-selected', 'false' );
+		$opt.addClass( 'is-selected' ).attr( 'aria-selected', 'true' );
+		$dd.removeClass( 'is-invalid' );
+		ddClose( $dd );
+		$dd.find( '.raq-dd__toggle' ).trigger( 'focus' );
+	}
+
+	$( document ).on( 'click', '.raq-dd__toggle', function ( e ) {
 		e.preventDefault();
 		e.stopPropagation();
-		var $list = $( this ).siblings( '.raq-cc__list' );
-		var isOpen = ! $list.prop( 'hidden' );
-		$( '.raq-cc__list' ).prop( 'hidden', true );
-		$( '.raq-cc__toggle' ).attr( 'aria-expanded', 'false' );
-		if ( ! isOpen ) {
-			$list.prop( 'hidden', false );
-			$( this ).attr( 'aria-expanded', 'true' );
+		var $dd = $( this ).closest( '.raq-dd' );
+		if ( $dd.find( '.raq-dd__panel' ).prop( 'hidden' ) ) {
+			ddOpen( $dd );
+		} else {
+			ddClose( $dd );
 		}
 	} );
 
-	$( document ).on( 'click', '.raq-cc__opt', function ( e ) {
+	$( document ).on( 'click', '.raq-dd__opt', function ( e ) {
 		e.preventDefault();
 		e.stopPropagation();
-		var $opt = $( this );
-		var $cc = $opt.closest( '.raq-cc' );
-		var val = String( $opt.attr( 'data-value' ) );
-		$cc.attr( 'data-value', val );
-		$cc.find( '.raq-cc__value' ).val( val );
-		$cc.find( '.raq-cc__toggle .raq-cc__flag' ).text( $opt.attr( 'data-flag' ) );
-		$cc.find( '.raq-cc__toggle .raq-cc__code' ).text( val );
-		$cc.find( '.raq-cc__list' ).prop( 'hidden', true );
-		$cc.find( '.raq-cc__toggle' ).attr( 'aria-expanded', 'false' );
+		ddChoose( $( this ).closest( '.raq-dd' ), $( this ) );
+	} );
+
+	// Clicks inside the panel (the search box, scrollbar, empty row) must not
+	// reach the document handler that closes every dropdown.
+	$( document ).on( 'click', '.raq-dd__panel', function ( e ) {
+		e.stopPropagation();
+	} );
+
+	$( document ).on( 'input', '.raq-dd__search', function () {
+		ddFilter( $( this ).closest( '.raq-dd' ), this.value );
+	} );
+
+	$( document ).on( 'keydown', '.raq-dd', function ( e ) {
+		var $dd = $( this );
+		var open = ! $dd.find( '.raq-dd__panel' ).prop( 'hidden' );
+		var $visible, idx, $active;
+
+		if ( e.key === 'Escape' ) {
+			if ( open ) {
+				e.preventDefault();
+				ddClose( $dd );
+				$dd.find( '.raq-dd__toggle' ).trigger( 'focus' );
+			}
+			return;
+		}
+		if ( ! open ) {
+			// Arrow keys on the closed toggle open it (native <select> habit).
+			if ( e.key === 'ArrowDown' || e.key === 'ArrowUp' ) {
+				e.preventDefault();
+				ddOpen( $dd );
+			}
+			return;
+		}
+		if ( e.key === 'ArrowDown' || e.key === 'ArrowUp' ) {
+			e.preventDefault();
+			$visible = $dd.find( '.raq-dd__opt:not([hidden])' );
+			if ( ! $visible.length ) {
+				return;
+			}
+			idx = $visible.index( $visible.filter( '.is-active' ) );
+			idx = e.key === 'ArrowDown' ? Math.min( idx + 1, $visible.length - 1 ) : Math.max( idx - 1, 0 );
+			ddCursor( $dd, $visible.eq( idx ) );
+		} else if ( e.key === 'Enter' ) {
+			// Never let Enter in the search box submit the form.
+			e.preventDefault();
+			$active = $dd.find( '.raq-dd__opt.is-active:not([hidden])' ).first();
+			if ( $active.length ) {
+				ddChoose( $dd, $active );
+			}
+		} else if ( e.key === 'Tab' ) {
+			ddClose( $dd );
+		}
 	} );
 
 	$( document ).on( 'click', function () {
-		$( '.raq-cc__list' ).prop( 'hidden', true );
-		$( '.raq-cc__toggle' ).attr( 'aria-expanded', 'false' );
+		if ( $( '.raq-dd__panel:not([hidden])' ).length ) {
+			ddCloseAll();
+		}
 	} );
+
+	// Required dropdowns: the value travels in a hidden input, which HTML5
+	// validation skips, so the form's submit handler asks here first.
+	function ddValidate( $form ) {
+		var ok = true;
+		$form.find( '.raq-dd[data-required]' ).each( function () {
+			var $dd = $( this );
+			var empty = ! $dd.find( '.raq-dd__value' ).val();
+			$dd.toggleClass( 'is-invalid', empty );
+			if ( empty && ok ) {
+				ok = false;
+				$dd.find( '.raq-dd__toggle' ).trigger( 'focus' );
+			}
+		} );
+		return ok;
+	}
 
 	// Phone inputs: digits only - strip letters, spaces and symbols as typed
 	// (covers typing, paste and autofill). Server validates again.

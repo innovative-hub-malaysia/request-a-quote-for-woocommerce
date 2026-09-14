@@ -236,38 +236,58 @@ class RAQ_Form {
 				if ( ! isset( $codes[ $default ] ) ) {
 					$default = key( $codes );
 				}
-				$def_flag = isset( $codes[ $default ][0] ) ? $codes[ $default ][0] : '';
+				$options = array();
+				foreach ( $codes as $code => $meta ) {
+					$options[] = array(
+						'value'  => $code,
+						'label'  => isset( $meta[1] ) ? $meta[1] : '',
+						'flag'   => isset( $meta[0] ) ? $meta[0] : '',
+						'suffix' => $code,
+						// Closed state shows the code, not the name.
+						'short'  => $code,
+					);
+				}
 
 				echo '<span class="raq-phone">';
-				// Custom country-code dropdown: closed = flag + code; open = names.
-				echo '<span class="raq-cc" data-value="' . esc_attr( $default ) . '">';
-				echo '<input type="hidden" name="phone_cc" class="raq-cc__value" value="' . esc_attr( $default ) . '">';
-				echo '<button type="button" class="raq-cc__toggle" aria-label="' . esc_attr__( 'Country code', 'request-a-quote-for-woocommerce' ) . '" aria-haspopup="listbox" aria-expanded="false">';
-				echo '<span class="raq-cc__flag">' . esc_html( $def_flag ) . '</span><span class="raq-cc__code">' . esc_html( $default ) . '</span><span class="raq-cc__caret" aria-hidden="true">&#9662;</span>';
-				echo '</button>';
-				echo '<ul class="raq-cc__list" role="listbox" hidden>';
-				foreach ( $codes as $code => $meta ) {
-					$flag = isset( $meta[0] ) ? $meta[0] : '';
-					$name = isset( $meta[1] ) ? $meta[1] : '';
-					echo '<li class="raq-cc__opt" role="option" data-value="' . esc_attr( $code ) . '" data-flag="' . esc_attr( $flag ) . '">';
-					echo '<span class="raq-cc__flag">' . esc_html( $flag ) . '</span> ' . esc_html( $name ) . ' <span class="raq-cc__optcode">(' . esc_html( $code ) . ')</span>';
-					echo '</li>';
-				}
-				echo '</ul>';
-				echo '</span>';
+				echo self::dropdown_html( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside.
+					array(
+						'name'     => 'phone_cc',
+						'value'    => $default,
+						'options'  => $options,
+						'variant'  => 'cc',
+						'label'    => __( 'Country code', 'request-a-quote-for-woocommerce' ),
+						'search'   => __( 'Search country or code', 'request-a-quote-for-woocommerce' ),
+					)
+				);
 				echo '<input type="tel" id="' . esc_attr( $id ) . '" name="' . esc_attr( $key ) . '" inputmode="numeric" autocomplete="tel" pattern="[0-9]{6,15}" title="' . esc_attr__( 'Digits only (6-15 numbers), no spaces or letters.', 'request-a-quote-for-woocommerce' ) . '"' . esc_attr( $req_attr ) . '>';
 				echo '</span>';
 				break;
 
 			case 'country':
-				echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $key ) . '"' . esc_attr( $req_attr ) . '>';
-				echo '<option value="">' . esc_html__( 'Select a country', 'request-a-quote-for-woocommerce' ) . '</option>';
-				if ( function_exists( 'WC' ) && WC()->countries ) {
-					foreach ( WC()->countries->get_countries() as $cc => $cname ) {
-						echo '<option value="' . esc_attr( $cname ) . '">' . esc_html( $cname ) . '</option>';
-					}
+				$options = array();
+				foreach ( self::countries() as $cc => $cname ) {
+					// The submitted value stays the country NAME (as the old
+					// <select> sent), so stored quotes, emails and the admin
+					// list are unchanged.
+					$options[] = array(
+						'value' => $cname,
+						'label' => $cname,
+						'flag'  => self::flag_emoji( $cc ),
+					);
 				}
-				echo '</select>';
+				echo self::dropdown_html( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside.
+					array(
+						'id'          => $id,
+						'name'        => $key,
+						'value'       => '',
+						'options'     => $options,
+						'variant'     => 'country',
+						'required'    => $required,
+						'label'       => $label,
+						'placeholder' => __( 'Select a country', 'request-a-quote-for-woocommerce' ),
+						'search'      => __( 'Search country', 'request-a-quote-for-woocommerce' ),
+					)
+				);
 				break;
 
 			default:
@@ -276,6 +296,145 @@ class RAQ_Form {
 
 		echo '</div>';
 		return ob_get_clean();
+	}
+
+	/**
+	 * Searchable dropdown: a button showing the choice, and a panel with a
+	 * search box above the option list. One component for the phone country
+	 * code and the Country field; assets/js/raq-frontend.js drives it.
+	 *
+	 * The choice travels in a hidden input, so the form posts exactly what a
+	 * native <select> would. A hidden input is exempt from HTML5 validation,
+	 * so `required` is enforced by the JS submit handler (and the server).
+	 *
+	 * @param array $args {
+	 *     @type string $name        Input name.
+	 *     @type string $value       Pre-selected value ('' = placeholder).
+	 *     @type array  $options     Rows of [ value, label, flag?, suffix?, short? ]:
+	 *                              label = the row text; suffix = trailing row text
+	 *                              (the calling code) that also joins the search
+	 *                              haystack; short = closed-state text when this
+	 *                              row is chosen (defaults to label).
+	 *     @type string $variant     'cc' | 'country' (BEM modifier).
+	 *     @type bool   $required    Enforced client-side on submit.
+	 *     @type string $id          Id for the toggle (label target).
+	 *     @type string $label       aria-label for the toggle.
+	 *     @type string $placeholder Closed-state text when nothing is chosen.
+	 *     @type string $search      Search box placeholder.
+	 * }
+	 * @return string
+	 */
+	protected static function dropdown_html( $args ) {
+		$args = wp_parse_args(
+			$args,
+			array(
+				'name'        => '',
+				'value'       => '',
+				'options'     => array(),
+				'variant'     => 'cc',
+				'required'    => false,
+				'id'          => '',
+				'label'       => '',
+				'placeholder' => '',
+				'search'      => '',
+			)
+		);
+
+		$current = null;
+		foreach ( $args['options'] as $opt ) {
+			if ( isset( $opt['value'] ) && (string) $opt['value'] === (string) $args['value'] ) {
+				$current = $opt;
+				break;
+			}
+		}
+		$cur_flag = $current && isset( $current['flag'] ) ? $current['flag'] : '';
+		$cur_text = $current ? ( isset( $current['short'] ) ? $current['short'] : $current['label'] ) : $args['placeholder'];
+
+		// Ids must be unique even when the form renders twice on one page
+		// (footer drawer + Quote Page), so number the lists per render.
+		static $instance = 0;
+		$instance++;
+		$list_id = 'raq-dd-list-' . $instance;
+
+		ob_start();
+		echo '<span class="raq-dd raq-dd--' . esc_attr( $args['variant'] ) . ( $current ? '' : ' is-empty' ) . '" data-value="' . esc_attr( $args['value'] ) . '"' . ( $args['required'] ? ' data-required="1"' : '' ) . '>';
+		echo '<input type="hidden" name="' . esc_attr( $args['name'] ) . '" class="raq-dd__value" value="' . esc_attr( $args['value'] ) . '">';
+		// No aria-label on the toggle: it would replace the visible text and
+		// hide the chosen value from screen readers. The Country toggle is
+		// named by its <label for>; the code toggle carries a hidden prefix.
+		echo '<button type="button" class="raq-dd__toggle"' . ( $args['id'] ? ' id="' . esc_attr( $args['id'] ) . '"' : '' ) . ' aria-haspopup="listbox" aria-expanded="false" aria-controls="' . esc_attr( $list_id ) . '">';
+		if ( ! $args['id'] && '' !== $args['label'] ) {
+			echo '<span class="raq-sr">' . esc_html( $args['label'] ) . ' </span>';
+		}
+		echo '<span class="raq-dd__flag">' . esc_html( $cur_flag ) . '</span><span class="raq-dd__text">' . esc_html( $cur_text ) . '</span><span class="raq-dd__caret" aria-hidden="true">&#9662;</span>';
+		echo '</button>';
+		echo '<span class="raq-dd__panel" hidden>';
+		echo '<input type="search" class="raq-dd__search" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="' . esc_attr( $list_id ) . '" placeholder="' . esc_attr( $args['search'] ) . '" aria-label="' . esc_attr( $args['search'] ) . '" autocomplete="off" autocapitalize="off" spellcheck="false">';
+		echo '<ul class="raq-dd__list" id="' . esc_attr( $list_id ) . '" role="listbox">';
+		$i = 0;
+		foreach ( $args['options'] as $opt ) {
+			$i++;
+			$value  = isset( $opt['value'] ) ? (string) $opt['value'] : '';
+			$label  = isset( $opt['label'] ) ? (string) $opt['label'] : $value;
+			$flag   = isset( $opt['flag'] ) ? (string) $opt['flag'] : '';
+			$suffix = isset( $opt['suffix'] ) ? (string) $opt['suffix'] : '';
+			$short  = isset( $opt['short'] ) ? (string) $opt['short'] : $label;
+			// What the search box matches against: name + code, lower-cased,
+			// so "malay", "+60" and "60" all find Malaysia.
+			$haystack = trim( $label . ' ' . $suffix . ' ' . ltrim( $suffix, '+' ) );
+			$haystack = function_exists( 'mb_strtolower' ) ? mb_strtolower( $haystack, 'UTF-8' ) : strtolower( $haystack );
+			$selected = $current && $value === (string) $current['value'];
+			echo '<li class="raq-dd__opt' . ( $selected ? ' is-selected' : '' ) . '" id="' . esc_attr( $list_id . '-' . $i ) . '" role="option" aria-selected="' . ( $selected ? 'true' : 'false' ) . '" data-value="' . esc_attr( $value ) . '" data-flag="' . esc_attr( $flag ) . '" data-short="' . esc_attr( $short ) . '" data-search="' . esc_attr( $haystack ) . '">';
+			echo '<span class="raq-dd__flag">' . esc_html( $flag ) . '</span><span class="raq-dd__label">' . esc_html( $label ) . '</span>';
+			if ( '' !== $suffix ) {
+				echo '<span class="raq-dd__suffix">(' . esc_html( $suffix ) . ')</span>';
+			}
+			echo '</li>';
+		}
+		echo '</ul>';
+		echo '<span class="raq-dd__empty" hidden>' . esc_html__( 'No matches', 'request-a-quote-for-woocommerce' ) . '</span>';
+		echo '</span>';
+		echo '</span>';
+		return ob_get_clean();
+	}
+
+	/**
+	 * Countries for the Country field: WooCommerce's list (ISO code => name),
+	 * empty when WooCommerce is unavailable. Also the server-side whitelist.
+	 *
+	 * @return array
+	 */
+	public static function countries() {
+		if ( ! function_exists( 'WC' ) || ! WC()->countries ) {
+			return array();
+		}
+		// WooCommerce stores some names with HTML entities ("Cura&ccedil;ao").
+		// The browser posts the decoded text, so decode here too - the form
+		// and the server whitelist must be the same plain-text list.
+		return array_map(
+			static function ( $name ) {
+				return html_entity_decode( (string) $name, ENT_QUOTES, 'UTF-8' );
+			},
+			(array) WC()->countries->get_countries()
+		);
+	}
+
+	/**
+	 * ISO 3166-1 alpha-2 code => flag emoji (regional indicator pair).
+	 *
+	 * @param string $cc Two-letter country code.
+	 * @return string
+	 */
+	protected static function flag_emoji( $cc ) {
+		$cc = strtoupper( (string) $cc );
+		if ( ! preg_match( '/^[A-Z]{2}\\z/', $cc ) ) {
+			return '';
+		}
+		$flag = '';
+		for ( $i = 0; $i < 2; $i++ ) {
+			$flag .= html_entity_decode( '&#' . ( 0x1F1E6 + ord( $cc[ $i ] ) - 65 ) . ';', ENT_QUOTES, 'UTF-8' );
+		}
+		return $flag;
 	}
 
 	/**

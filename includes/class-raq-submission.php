@@ -104,6 +104,15 @@ class RAQ_Submission {
 		$errors    = array();
 		$cc        = isset( $post['phone_cc'] ) ? sanitize_text_field( wp_unslash( $post['phone_cc'] ) ) : '';
 
+		// The country code must be one we offer (the same filterable list the
+		// form renders) - it is prefixed to the phone number that reaches the
+		// sales team, so it must never carry free text.
+		if ( '' !== $cc && ! array_key_exists( $cc, RAQ_Form::dial_codes() ) ) {
+			$errors[] = __( 'Please select a valid country code.', 'request-a-quote-for-woocommerce' );
+			$cc       = '';
+		}
+		$countries = RAQ_Form::countries();
+
 		foreach ( (array) $fields as $field ) {
 			$key = $field['key'];
 			$raw = isset( $post[ $key ] ) ? wp_unslash( $post[ $key ] ) : '';
@@ -127,6 +136,15 @@ class RAQ_Submission {
 			if ( ! empty( $field['required'] ) && '' === trim( (string) $value ) ) {
 				/* translators: %s: field label. */
 				$errors[] = sprintf( __( '%s is required.', 'request-a-quote-for-woocommerce' ), $field['label'] );
+				continue;
+			}
+
+			// Country: the value is the country name, and it must be one from the
+			// list the form rendered (WooCommerce's). Skipped when WooCommerce
+			// gave the form no list - then nothing could have been chosen anyway.
+			if ( 'country' === $field['type'] && '' !== $value && $countries && ! in_array( $value, $countries, true ) ) {
+				/* translators: %s: field label. */
+				$errors[] = sprintf( __( 'Please select a valid %s.', 'request-a-quote-for-woocommerce' ), $field['label'] );
 				continue;
 			}
 

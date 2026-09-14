@@ -100,6 +100,7 @@ class RAQ_Frontend {
 					'redirecting' => __( 'Redirecting to the homepage in', 'request-a-quote-for-woocommerce' ),
 					'seconds'    => __( 'seconds', 'request-a-quote-for-woocommerce' ),
 					'backHome'   => __( 'Back to homepage', 'request-a-quote-for-woocommerce' ),
+					'chooseRequired' => __( 'Please complete the required fields.', 'request-a-quote-for-woocommerce' ),
 				),
 			)
 		);

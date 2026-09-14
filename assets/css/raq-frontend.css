@@ -509,13 +509,17 @@
 	min-width: 0;
 }
 
-/* Custom country-code dropdown */
-.raq-cc {
+/* Searchable dropdown (phone country code + Country field) */
+.raq-dd {
 	position: relative;
 	flex: 0 0 auto;
 }
 
-.raq-cc__toggle {
+.raq-field--country .raq-dd {
+	display: block;
+}
+
+.raq-dd__toggle {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -530,34 +534,100 @@
 	cursor: pointer;
 }
 
-.raq-cc__flag {
+.raq-field--country .raq-dd__toggle {
+	width: 100%;
+	text-align: left;
+}
+
+.raq-field--country .raq-dd__text {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.raq-dd.is-empty .raq-dd__text {
+	color: var(--raq-muted);
+}
+
+.raq-dd__flag:empty {
+	display: none;
+}
+
+.raq-dd__toggle:focus-visible {
+	outline: none;
+	border-color: var(--raq-accent);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Screen-reader-only prefix inside the code toggle ("Country code +60"). */
+.raq-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.raq-dd.is-invalid .raq-dd__toggle {
+	border-color: #c0392b;
+}
+
+.raq-dd__flag {
 	font-size: 17px;
 	line-height: 1;
 }
 
-.raq-cc__caret {
+.raq-dd__caret {
 	color: var(--raq-muted);
 	font-size: 10px;
 }
 
-.raq-cc__list {
+.raq-dd__panel {
 	position: absolute;
 	z-index: 20;
 	top: calc(100% + 4px);
 	left: 0;
-	min-width: 250px;
-	max-height: 260px;
-	overflow-y: auto;
-	margin: 0;
-	padding: 6px;
-	list-style: none;
+	display: flex;
+	flex-direction: column;
+	min-width: 260px;
+	max-width: 92vw;
 	background: #fff;
 	border: 1px solid var(--raq-border);
 	border-radius: var(--raq-radius);
 	box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
 }
 
-.raq-cc__opt {
+.raq-field--country .raq-dd__panel {
+	right: 0;
+}
+
+.raq-dd__panel[hidden] {
+	display: none;
+}
+
+/* Specificity + !important on purpose: the generic .raq-field input rule
+   above forces 100% width / 46px height on every input, and the search box
+   must not inherit that. */
+.raq-field .raq-dd .raq-dd__panel input.raq-dd__search[type="search"],
+.raq-quote-form-full .raq-dd .raq-dd__panel input.raq-dd__search[type="search"] {
+	width: calc(100% - 12px) !important;
+	min-height: 38px !important;
+	margin: 6px 6px 0 !important;
+	padding: 0 10px !important;
+	font-size: 14px !important;
+	border-radius: 6px !important;
+}
+
+.raq-dd__list {
+	max-height: 240px;
+	overflow-y: auto;
+	margin: 0;
+	padding: 6px;
+	list-style: none;
+}
+
+.raq-dd__opt {
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -568,13 +638,39 @@
 	cursor: pointer;
 }
 
-.raq-cc__opt:hover {
+.raq-dd__opt[hidden] {
+	display: none;
+}
+
+.raq-dd__opt:hover,
+.raq-dd__opt.is-active {
 	background: #f2f4f7;
 }
 
-.raq-cc__optcode {
+.raq-dd__opt.is-selected {
+	font-weight: 600;
+}
+
+.raq-dd__label {
+	flex: 1;
+	min-width: 0;
+}
+
+.raq-dd__suffix {
 	margin-left: auto;
 	color: var(--raq-muted);
+}
+
+.raq-dd__empty {
+	display: block;
+	padding: 12px 16px;
+	font-size: 14px;
+	color: var(--raq-muted);
+}
+
+/* display:block above out-specifies the UA [hidden] rule - restate it. */
+.raq-dd__empty[hidden] {
+	display: none;
 }
 
 /* Submit aligned right on the Quote Page */

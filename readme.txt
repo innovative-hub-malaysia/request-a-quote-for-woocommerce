@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.4
 WC requires at least: 6.0
 WC tested up to: 9.9
-Stable tag: 1.0.5
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,6 +33,21 @@ Ground rules:
 Built once, deployable to any no-price B2B store.
 
 == Changelog ==
+
+= 1.1.0 =
+* The Country field and the phone country-code picker are now searchable: open
+  the dropdown, type a country name or calling code, pick from the filtered
+  list. Keyboard: arrows, Enter, Esc. Country options show their flag.
+* Server-side: the phone country code and the Country value are validated
+  against the lists the form offers, not just sanitised. WooCommerce country
+  names that carry HTML entities (Curaçao, Côte d'Ivoire) are decoded on both
+  sides so the same text is offered, posted and accepted.
+* Accessible: the toggles announce their current value, the search box is a
+  combobox and the keyboard cursor is exposed via aria-activedescendant.
+* The Country field posts the same value as before (the country name), so
+  stored quotes, emails and the admin list are unchanged.
+* Markup change for theme overrides: the `.raq-cc*` classes are replaced by
+  `.raq-dd*` (shared by both pickers).
 
 = 1.0.5 =
 * Updates now come from Innovative Hub's GitHub repository through the normal
