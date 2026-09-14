@@ -1,0 +1,731 @@
+/**
+ * Request a Quote - front-end styles.
+ *
+ * A self-contained design system: it defines its own tokens and sizing so the
+ * form and drawer look consistent on ANY host theme (it does not inherit the
+ * theme's field styling). The one brand colour is driven by --raq-accent, set
+ * inline from the plugin settings. Namespaced .raq-* to avoid collisions.
+ */
+
+:root {
+	--raq-accent: #1c1a17;
+	--raq-accent-text: #ffffff;
+	--raq-ink: #1f2430;
+	--raq-muted: #6b7280;
+	--raq-border: #d6dae1;
+	--raq-line: #eceef1;
+	--raq-surface: #ffffff;
+	--raq-radius: 10px;
+	--raq-field-h: 46px;
+	--raq-space: 8px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Buttons (our own; native ones are recoloured inline)
+ * ---------------------------------------------------------------- */
+.raq-add-to-quote,
+.raq-submit,
+.raq-request-quote {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 12px 22px;
+	border: none;
+	border-radius: var(--raq-radius);
+	background: var(--raq-accent);
+	color: var(--raq-accent-text);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.3;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.raq-add-to-quote:hover,
+.raq-submit:hover,
+.raq-request-quote:hover {
+	filter: brightness(1.12);
+	color: var(--raq-accent-text);
+}
+
+/* Simple hover only: kill theme button icon animations (e.g. Divi's ">" arrow
+ * that slides in via :after and shifts the padding). */
+.raq-add-to-quote::before,
+.raq-add-to-quote::after,
+.raq-submit::before,
+.raq-submit::after,
+.raq-request-quote::before,
+.raq-request-quote::after,
+.single_add_to_quote_button::before,
+.single_add_to_quote_button::after {
+	content: none !important;
+	display: none !important;
+}
+
+.raq-add-to-quote:active,
+.raq-submit:active {
+	transform: translateY(1px);
+}
+
+.raq-add-to-quote.is-busy,
+.raq-submit.is-busy {
+	opacity: 0.65;
+	pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- *
+ * Count badge + header toggle + floating button
+ * ---------------------------------------------------------------- */
+.raq-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: #d6402f;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.raq-count--empty {
+	display: none;
+}
+
+.raq-quote-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	text-decoration: none;
+	color: inherit;
+}
+
+.raq-fab {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	z-index: 2147483000;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 54px;
+	padding: 0 20px;
+	border: none;
+	border-radius: 999px;
+	background: var(--raq-accent);
+	color: var(--raq-accent-text);
+	cursor: pointer;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.raq-fab svg {
+	stroke: var(--raq-accent-text);
+}
+
+.raq-fab .raq-count {
+	position: relative;
+	top: -9px;
+	margin-left: -4px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Drawer + overlay (sit above any theme header / sticky bar)
+ * ---------------------------------------------------------------- */
+.raq-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483000;
+	background: rgba(17, 20, 26, 0.5);
+	opacity: 0;
+	transition: opacity 0.25s ease;
+}
+
+.raq-overlay.is-open {
+	opacity: 1;
+}
+
+.raq-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	z-index: 2147483001;
+	display: flex;
+	flex-direction: column;
+	width: 400px;
+	max-width: 92vw;
+	height: 100%;
+	background: var(--raq-surface);
+	color: var(--raq-ink);
+	box-shadow: -8px 0 40px rgba(0, 0, 0, 0.25);
+	transform: translateX(100%);
+	/*
+	 * visibility:hidden while closed is load-bearing, not tidiness. transform
+	 * moves the box off-screen but the -8px 0 40px box-shadow still paints, and
+	 * at z-index 2147483001 it lands on top of the site header and footer as a
+	 * 40px grey strip down the right edge of EVERY page. Measured on a live
+	 * site: right-edge luminance 255 -> 215 on a white header, and the footer's
+	 * orange 223 -> 191.
+	 *
+	 * The delayed visibility transition keeps the slide-out animation intact:
+	 * visibility flips only after the 0.28s transform has finished.
+	 */
+	visibility: hidden;
+	transition: transform 0.28s ease, visibility 0s linear 0.28s;
+}
+
+.raq-drawer.is-open {
+	transform: translateX(0);
+	visibility: visible;
+	transition: transform 0.28s ease, visibility 0s;
+}
+
+.raq-drawer__head {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 18px 20px;
+	border-bottom: 1px solid var(--raq-line);
+	background: var(--raq-surface);
+}
+
+.raq-drawer__title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--raq-ink);
+}
+
+.raq-drawer__close {
+	border: none;
+	background: none;
+	font-size: 28px;
+	line-height: 1;
+	cursor: pointer;
+	color: var(--raq-muted);
+	padding: 0 4px;
+}
+
+.raq-drawer__scroll {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px 20px 28px;
+}
+
+.raq-drawer__empty {
+	color: var(--raq-muted);
+	padding: 28px 0;
+	text-align: center;
+}
+
+.raq-drawer__formwrap {
+	margin-top: 18px;
+	padding-top: 18px;
+	border-top: 1px solid var(--raq-line);
+}
+
+.raq-drawer__foot {
+	flex: none;
+	padding: 16px 20px;
+	border-top: 1px solid var(--raq-line);
+	background: var(--raq-surface);
+}
+
+.raq-request-quote {
+	display: flex;
+	width: 100%;
+}
+
+/* Drawer line items */
+.raq-line {
+	display: flex;
+	gap: 12px;
+	padding: 14px 0;
+	border-bottom: 1px solid var(--raq-line);
+}
+
+.raq-line:first-child {
+	padding-top: 0;
+}
+
+.raq-line__thumb img {
+	width: 66px;
+	height: 66px;
+	object-fit: contain; /* show the whole product, never crop */
+	background: #fff;
+	border: 1px solid var(--raq-line);
+	border-radius: 8px;
+	padding: 3px;
+	box-sizing: border-box;
+}
+
+.raq-line__info {
+	flex: 1;
+	min-width: 0;
+}
+
+.raq-line__name {
+	display: block;
+	font-weight: 600;
+	color: var(--raq-ink);
+}
+
+.raq-line__name a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.raq-line__meta {
+	display: block;
+	font-size: 12px;
+	color: var(--raq-muted);
+	margin-top: 2px;
+}
+
+.raq-line__qty {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+.raq-qty {
+	width: 70px;
+	height: 38px !important;
+	padding: 6px 8px !important;
+	border: 1px solid var(--raq-border) !important;
+	border-radius: 8px !important;
+	font-size: 14px !important;
+	box-sizing: border-box;
+}
+
+.raq-remove {
+	border: none;
+	background: none;
+	color: #b3261e;
+	cursor: pointer;
+	font-size: 13px;
+	text-decoration: underline;
+	padding: 0;
+}
+
+/* ---------------------------------------------------------------- *
+ * Quote Page
+ * ---------------------------------------------------------------- */
+.raq-quote-page {
+	max-width: 860px;
+	margin: 0 auto;
+	color: var(--raq-ink);
+}
+
+/* Page header: bold title + supporting description */
+.raq-page-head {
+	margin: 0 0 30px;
+}
+
+.raq-page-title {
+	margin: 0 0 10px !important;
+	font-size: 38px !important;
+	font-weight: 800 !important;
+	line-height: 1.15 !important;
+	color: var(--raq-ink) !important;
+}
+
+.raq-page-desc {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.6;
+	color: var(--raq-muted);
+}
+
+/* Section headings ("Your Quote" / "Your details") */
+.raq-section-title {
+	margin: 0 0 14px !important;
+	font-size: 21px !important;
+	font-weight: 700 !important;
+	line-height: 1.3 !important;
+	color: var(--raq-ink) !important;
+}
+
+.raq-quote-page__summary {
+	margin-bottom: 34px;
+}
+
+.raq-sum {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid var(--raq-line);
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.raq-sum th,
+.raq-sum td {
+	text-align: left;
+	padding: 13px 16px;
+	border-bottom: 1px solid var(--raq-line);
+	font-size: 15px;
+}
+
+.raq-sum thead th {
+	background: #f6f7f9;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--raq-muted);
+}
+
+.raq-sum tbody tr:last-child td,
+.raq-sum tr:last-child td {
+	border-bottom: none;
+}
+
+.raq-sum__qty {
+	text-align: right;
+	width: 80px;
+	white-space: nowrap;
+}
+
+.raq-sum__thumb {
+	width: 96px;
+	padding-right: 0;
+}
+
+.raq-sum__thumb img {
+	width: 76px;
+	height: 76px;
+	object-fit: contain; /* show the whole product, never crop */
+	background: #fff;
+	border: 1px solid var(--raq-line);
+	border-radius: 8px;
+	padding: 3px;
+	display: block;
+	box-sizing: border-box;
+}
+
+.raq-sum__name {
+	text-align: left;
+	font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- *
+ * Form (self-contained field sizing - overrides the theme)
+ * ---------------------------------------------------------------- */
+.raq-quote-form-full {
+	margin-top: 8px;
+}
+
+/* Two-column on the Quote Page; the drawer form stays single-column. */
+.raq-quote-page .raq-quote-form-full {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0 22px;
+	margin-top: 20px;
+}
+
+.raq-quote-page .raq-field--textarea,
+.raq-quote-page .raq-field--file,
+.raq-quote-page .raq-form__actions,
+.raq-quote-page .raq-form__msg {
+	grid-column: 1 / -1;
+}
+
+.raq-field {
+	display: block;
+	margin: 0 0 18px;
+}
+
+.raq-field label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--raq-ink);
+}
+
+.raq-field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.raq-field select,
+.raq-field textarea,
+.raq-quote-form-full input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.raq-quote-form-full select,
+.raq-quote-form-full textarea {
+	width: 100% !important;
+	min-height: var(--raq-field-h) !important;
+	height: auto;
+	margin: 0 !important;
+	padding: 11px 14px !important;
+	font-size: 15px !important;
+	line-height: 1.4 !important;
+	color: var(--raq-ink) !important;
+	background: #fff !important;
+	border: 1px solid var(--raq-border) !important;
+	border-radius: var(--raq-radius) !important;
+	box-shadow: none !important;
+	box-sizing: border-box !important;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.raq-field textarea,
+.raq-quote-form-full textarea {
+	min-height: 120px !important;
+	resize: vertical;
+}
+
+.raq-field select,
+.raq-quote-form-full select {
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M6 8 0 2l1.4-1.4L6 5.2 10.6.6 12 2z'/%3E%3C/svg%3E") !important;
+	background-repeat: no-repeat !important;
+	background-position: right 14px center !important;
+	padding-right: 38px !important;
+}
+
+.raq-field input:focus,
+.raq-field select:focus,
+.raq-field textarea:focus,
+.raq-quote-form-full input:focus,
+.raq-quote-form-full select:focus,
+.raq-quote-form-full textarea:focus {
+	outline: none !important;
+	border-color: var(--raq-accent) !important;
+	box-shadow: 0 0 0 3px rgba(28, 26, 23, 0.12) !important;
+}
+
+.raq-phone {
+	display: flex;
+	gap: 10px;
+	align-items: stretch;
+}
+
+.raq-phone > input[type="tel"] {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Custom country-code dropdown */
+.raq-cc {
+	position: relative;
+	flex: 0 0 auto;
+}
+
+.raq-cc__toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: var(--raq-field-h);
+	padding: 0 12px;
+	border: 1px solid var(--raq-border);
+	border-radius: var(--raq-radius);
+	background: #fff;
+	color: var(--raq-ink);
+	font-size: 15px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.raq-cc__flag {
+	font-size: 17px;
+	line-height: 1;
+}
+
+.raq-cc__caret {
+	color: var(--raq-muted);
+	font-size: 10px;
+}
+
+.raq-cc__list {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 4px);
+	left: 0;
+	min-width: 250px;
+	max-height: 260px;
+	overflow-y: auto;
+	margin: 0;
+	padding: 6px;
+	list-style: none;
+	background: #fff;
+	border: 1px solid var(--raq-border);
+	border-radius: var(--raq-radius);
+	box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+}
+
+.raq-cc__opt {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	font-size: 14px;
+	color: var(--raq-ink);
+	cursor: pointer;
+}
+
+.raq-cc__opt:hover {
+	background: #f2f4f7;
+}
+
+.raq-cc__optcode {
+	margin-left: auto;
+	color: var(--raq-muted);
+}
+
+/* Submit aligned right on the Quote Page */
+.raq-quote-page .raq-form__actions {
+	text-align: right;
+}
+
+/* Greyed CTA when the quote list is empty */
+.raq-drawer.is-empty .raq-request-quote,
+.raq-drawer.is-empty .raq-submit {
+	background: #c7cbd2 !important;
+	border-color: #c7cbd2 !important;
+	color: #fff !important;
+	pointer-events: none;
+	filter: none;
+}
+
+.raq-field__hint {
+	display: block;
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--raq-muted);
+}
+
+.raq-req {
+	color: #d6402f;
+}
+
+.raq-form__actions {
+	margin: 6px 0 0;
+}
+
+.raq-form__msg {
+	margin-top: 12px;
+	font-size: 14px;
+}
+
+.raq-form__msg--error {
+	color: #b3261e;
+}
+
+.raq-notice {
+	padding: 14px 16px;
+	border-radius: var(--raq-radius);
+	margin: 0 0 18px;
+	font-size: 14px;
+}
+
+.raq-notice--success {
+	background: #e7f6ee;
+	color: #1b5e3f;
+	border: 1px solid #b7e0c8;
+}
+
+.raq-notice--error {
+	background: #fbeae8;
+	color: #b3261e;
+	border: 1px solid #f0c8c2;
+}
+
+/* ---------------------------------------------------------------- *
+ * Thank-you panel
+ * ---------------------------------------------------------------- */
+.raq-thankyou {
+	text-align: center;
+	padding: 32px 20px;
+	max-width: 520px;
+	margin: 0 auto;
+}
+
+.raq-thankyou__icon {
+	color: var(--raq-accent);
+	margin-bottom: 8px;
+}
+
+.raq-thankyou h3 {
+	margin: 6px 0 10px;
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--raq-ink);
+}
+
+.raq-thankyou p {
+	color: var(--raq-muted);
+	margin: 0 0 10px;
+}
+
+.raq-thankyou__count {
+	font-size: 14px;
+}
+
+.raq-thankyou .raq-countdown {
+	font-weight: 700;
+	color: var(--raq-ink);
+}
+
+.raq-thankyou .raq-home-btn {
+	display: inline-flex;
+	margin-top: 14px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Toast
+ * ---------------------------------------------------------------- */
+.raq-toast {
+	position: fixed;
+	left: 50%;
+	bottom: 30px;
+	z-index: 2147483002;
+	transform: translateX(-50%) translateY(20px);
+	background: #1f2430;
+	color: #fff;
+	padding: 11px 20px;
+	border-radius: 10px;
+	font-size: 14px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.raq-toast.is-open {
+	opacity: 1;
+	transform: translateX(-50%) translateY(0);
+}
+
+.raq-toast--error {
+	background: #b3261e;
+}
+
+/* ---------------------------------------------------------------- *
+ * Responsive + motion
+ * ---------------------------------------------------------------- */
+@media (max-width: 600px) {
+	.raq-quote-page .raq-quote-form-full {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 480px) {
+	.raq-drawer {
+		width: 100%;
+		max-width: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.raq-drawer,
+	.raq-overlay,
+	.raq-toast,
+	.raq-add-to-quote,
+	.raq-submit {
+		transition: none;
+	}
+}
