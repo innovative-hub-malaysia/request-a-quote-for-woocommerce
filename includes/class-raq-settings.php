@@ -77,12 +77,13 @@ class RAQ_Settings {
 
 			// --- Analytics / GA4 -----------------------------------------.
 			'ga4_enabled'          => true,
-			'ga4_measurement_id'   => '', // Used only when no GTM dataLayer is present.
+			'ga4_measurement_id'   => '', // Empty on GTM sites (events go to the dataLayer); set = plugin loads gtag itself.
 
 			// --- Advanced ------------------------------------------------.
 			'auto_numbering'       => true,  // RAQ-0001 style customer-facing reference (built in Stage 5).
 			'number_prefix'        => 'RAQ-',
 			'purge_on_uninstall'   => false, // Non-destructive default: keep data on delete.
+			'auto_update'          => true,  // Install GitHub Releases on their own; RAQ_DISABLE_AUTO_UPDATE wins.
 		);
 	}
 

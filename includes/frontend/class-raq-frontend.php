@@ -47,9 +47,10 @@ class RAQ_Frontend {
 			);
 		}
 
-		// GA4 direct fallback: only when a Measurement ID is set (implies the
-		// site has no GTM container of its own). If a GTM dataLayer exists, the
-		// JS prefers it and this is not loaded.
+		// Direct GA4: when a Measurement ID is set the plugin loads gtag.js itself
+		// and the JS sends events through gtag() first. Sites that run GTM leave
+		// the ID empty and the JS pushes into the GTM dataLayer instead; setting
+		// both double-counts (the Guide tab says so).
 		$ga4_id = RAQ_Settings::get( 'ga4_measurement_id', '' );
 		if ( RAQ_Settings::get( 'ga4_enabled', true ) && $ga4_id ) {
 			wp_enqueue_script(

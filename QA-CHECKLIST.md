@@ -105,3 +105,16 @@ AND the drawer form (Submission = "inside the drawer").
 - [ ] Page-cached site: open the thank-you URL with two different `raq_ref`
       values in a private window - each shows its own reference (filled by
       JS, not cached).
+
+## Guide + updates switch (1.3.0)
+
+- [ ] Plugins screen: the RAQ row meta reads "Version | By | View details | Check for updates | FAQ";
+      FAQ opens Quotes > Settings > Guide.
+- [ ] Guide tab: every section renders, every question opens, every in-text link lands on the
+      right tab / screen (General, Form, Analytics, Emails, Advanced, Quotes, Analytics screen).
+- [ ] Guide tab has no Save button and no form.
+- [ ] Advanced > Updates: untick "Automatic updates", save, re-open - it stays unticked; with
+      `define( 'RAQ_DISABLE_AUTO_UPDATE', true )` in wp-config.php the row shows the constant
+      notice instead of a checkbox and saving the tab does not touch the stored value.
+- [ ] With the switch off, Dashboard > Updates still lists the plugin update; WP's own
+      "Enable auto-updates" column reflects the plugin's decision.

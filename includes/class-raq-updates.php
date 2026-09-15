@@ -11,7 +11,10 @@
  * and excludes the plugin from the wp.org update request.
  *
  * Auto-updates are ON by default so every site picks up a Release on its own.
- * Define RAQ_DISABLE_AUTO_UPDATE as true in wp-config.php to opt a site out.
+ * A site switches them off under Quotes > Settings > Advanced > Updates; the
+ * RAQ_DISABLE_AUTO_UPDATE constant in wp-config.php (true = off, false = forced
+ * on) is the ops override and wins over the setting. When off, new versions
+ * are still offered on the Plugins screen for a one-click manual update.
  *
  * Releasing: bump the Version header + RAQ_VERSION, tag `vX.Y.Z`, and publish a
  * GitHub Release with the built zip attached (bin/build-release.sh does it).
@@ -48,7 +51,9 @@ class RAQ_Updates {
 	}
 
 	/**
-	 * Auto-update this plugin unless the site opted out.
+	 * Auto-update this plugin unless the site opted out - by the
+	 * RAQ_DISABLE_AUTO_UPDATE constant first, else by the `auto_update`
+	 * setting on the Advanced tab (default on).
 	 *
 	 * @param bool|null $update Whether to auto-update.
 	 * @param object    $item   The update offer.
@@ -58,6 +63,14 @@ class RAQ_Updates {
 		if ( ! is_object( $item ) || ! isset( $item->plugin ) || RAQ_PLUGIN_BASENAME !== $item->plugin ) {
 			return $update;
 		}
-		return ! ( defined( 'RAQ_DISABLE_AUTO_UPDATE' ) && RAQ_DISABLE_AUTO_UPDATE );
+		if ( defined( 'RAQ_DISABLE_AUTO_UPDATE' ) ) {
+			return ! RAQ_DISABLE_AUTO_UPDATE;
+		}
+		// Read the option directly, by its literal key: this class loads before
+		// the plugin core (and without WooCommerce the core never loads, so
+		// RAQ_Settings may not exist here), and a fallback of "true" when the
+		// core is not booted would silently ignore a site that switched off.
+		$saved = get_option( 'raq_settings', array() );
+		return ! ( is_array( $saved ) && array_key_exists( 'auto_update', $saved ) && ! $saved['auto_update'] );
 	}
 }

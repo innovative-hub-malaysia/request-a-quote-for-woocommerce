@@ -33,6 +33,7 @@ class RAQ_Settings_Page {
 		add_action( 'admin_post_raq_save_settings', array( __CLASS__, 'handle_save' ) );
 		add_action( 'admin_post_raq_create_thankyou', array( __CLASS__, 'handle_create_thankyou' ) );
 		add_filter( 'plugin_action_links_' . RAQ_PLUGIN_BASENAME, array( __CLASS__, 'action_links' ) );
+		add_filter( 'plugin_row_meta', array( __CLASS__, 'row_meta' ), 20, 2 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 	}
 
@@ -83,6 +84,23 @@ class RAQ_Settings_Page {
 	}
 
 	/**
+	 * Add a "FAQ" link to the plugin row meta (the "Version | By | View
+	 * details | Check for updates" line), leading to the Guide tab.
+	 *
+	 * @param array  $links Existing meta links.
+	 * @param string $file  Plugin basename the row is for.
+	 * @return array
+	 */
+	public static function row_meta( $links, $file ) {
+		if ( RAQ_PLUGIN_BASENAME !== $file ) {
+			return $links;
+		}
+		$url     = admin_url( 'edit.php?post_type=' . RAQ_CPT::POST_TYPE . '&page=raq-settings&tab=guide' );
+		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'FAQ', 'request-a-quote-for-woocommerce' ) . '</a>';
+		return $links;
+	}
+
+	/**
 	 * Add the settings submenu under the Quotes CPT.
 	 */
 	public static function add_menu() {
@@ -110,6 +128,7 @@ class RAQ_Settings_Page {
 			'emails'    => __( 'Emails', 'request-a-quote-for-woocommerce' ),
 			'analytics' => __( 'Analytics', 'request-a-quote-for-woocommerce' ),
 			'advanced'  => __( 'Advanced', 'request-a-quote-for-woocommerce' ),
+			'guide'     => __( 'Guide', 'request-a-quote-for-woocommerce' ),
 		);
 	}
 
@@ -154,6 +173,12 @@ class RAQ_Settings_Page {
 					</a>
 				<?php endforeach; ?>
 			</h2>
+
+			<?php if ( 'guide' === $active_tab ) : ?>
+				<?php self::tab_guide(); ?>
+			</div>
+			<?php return; ?>
+			<?php endif; ?>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="raq_save_settings">
@@ -586,7 +611,7 @@ class RAQ_Settings_Page {
 			<tr>
 				<th scope="row"><label for="raq_ga4_id"><?php esc_html_e( 'GA4 Measurement ID', 'request-a-quote-for-woocommerce' ); ?></label></th>
 				<td><input type="text" id="raq_ga4_id" class="regular-text" name="ga4_measurement_id" value="<?php echo esc_attr( $s['ga4_measurement_id'] ); ?>" placeholder="G-XXXXXXXXXX">
-				<p class="description"><?php esc_html_e( 'Used only when no GTM dataLayer is detected on the page.', 'request-a-quote-for-woocommerce' ); ?></p></td>
+				<p class="description"><?php esc_html_e( 'Leave empty if the site already runs Google Tag Manager - the plugin then pushes the events into the GTM dataLayer instead (see the Guide tab). With an ID set, the plugin loads GA4 itself.', 'request-a-quote-for-woocommerce' ); ?></p></td>
 			</tr>
 		</table>
 		<?php
@@ -614,6 +639,245 @@ class RAQ_Settings_Page {
 				<p class="description"><?php esc_html_e( 'Off by default. Your data is kept unless you opt in here.', 'request-a-quote-for-woocommerce' ); ?></p></td>
 			</tr>
 		</table>
+
+		<h2 class="title"><?php esc_html_e( 'Updates', 'request-a-quote-for-woocommerce' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'New versions are published as GitHub Releases and offered on the Plugins screen like any other plugin.', 'request-a-quote-for-woocommerce' ); ?></p>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Automatic updates', 'request-a-quote-for-woocommerce' ); ?></th>
+				<td>
+					<?php if ( defined( 'RAQ_DISABLE_AUTO_UPDATE' ) ) : // The constant is an ops override; show the state, do not offer a switch that would not work. ?>
+						<p><?php echo esc_html( RAQ_DISABLE_AUTO_UPDATE ? __( 'Disabled by RAQ_DISABLE_AUTO_UPDATE in wp-config.php. Remove that line to control it here.', 'request-a-quote-for-woocommerce' ) : __( 'Forced on by RAQ_DISABLE_AUTO_UPDATE in wp-config.php. Remove that line to control it here.', 'request-a-quote-for-woocommerce' ) ); ?></p>
+					<?php else : ?>
+						<label><input type="checkbox" name="auto_update" value="1" <?php checked( ! empty( $s['auto_update'] ) ); ?>> <?php esc_html_e( 'Install new versions automatically (recommended)', 'request-a-quote-for-woocommerce' ); ?></label>
+						<p class="description"><?php esc_html_e( 'When off, updates are still offered on the Plugins screen for you to install by hand.', 'request-a-quote-for-woocommerce' ); ?></p>
+					<?php endif; ?>
+				</td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	/* ------------------------------------------------------------------ *
+	 * Guide (FAQ)
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * A read-only FAQ. Written for the person who runs the site - a
+	 * colleague setting it up or the client who inherits it - not for us:
+	 * plain language, one answer per question, no form. Keep it accurate to
+	 * the code; a wrong guide costs more than no guide.
+	 */
+	protected static function tab_guide() {
+		$base      = admin_url( 'edit.php?post_type=' . RAQ_CPT::POST_TYPE );
+		$settings  = $base . '&page=raq-settings';
+		$quotes    = $base;
+		$analytics = $base . '&page=raq-analytics';
+		$tab       = function ( $t ) use ( $settings ) {
+			return $settings . '&tab=' . $t;
+		};
+
+		$sections = array(
+			array(
+				'title' => __( 'What this plugin does', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'Why is it installed?', 'request-a-quote-for-woocommerce' ),
+						__( 'It turns a WooCommerce store into a B2B catalogue where customers request a quote instead of paying at a checkout. Prices are hidden, every Add to Cart becomes Add to Quote, and the cart and checkout pages send visitors to the Quote Page. Each request is saved as a quote in WP Admin for the sales team to price and follow up.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Is anything permanently changed in the store?', 'request-a-quote-for-woocommerce' ),
+						__( 'No. Everything is switched on by the Master Switch and off again the same way. Turn it off, or deactivate the plugin, and the store sells exactly as before - prices, cart and checkout all return. Quotes already collected stay in the database.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Setting it up', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'What is the minimum setup?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: 1: link to the General tab, 2: shortcode. */
+							__( 'Three things on the %1$s tab: turn the Master Switch on, create a page with the %2$s shortcode on it (the plugin finds the page by itself - there is no page picker), and choose where the form is submitted. Then place the quote button in the header with the shortcode below, or leave the floating button on.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'general' ) ) . '">' . esc_html__( 'General', 'request-a-quote-for-woocommerce' ) . '</a>',
+							'<code>[raq_quote_form]</code>'
+						),
+					),
+					array(
+						__( 'How do visitors open their quote list?', 'request-a-quote-for-woocommerce' ),
+						__( 'Two ways, both showing a count badge: a floating button in a corner of every page (position or hide it under General > Appearance), and the [raq_quote_button] shortcode for a header, menu or footer. Either opens the drawer where they change quantities, remove lines and, in drawer mode, send the request.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Quote Page form or drawer form - which should I pick?', 'request-a-quote-for-woocommerce' ),
+						__( '"Route to the Quote Page" shows the full form on its own page with a summary of the items - best when the form has many fields or attachments. "Submit inside the drawer" lets the visitor send the request without leaving the product page - fewer steps, best for short forms. It is one setting under General > Submission; the fields are the same in both.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'What happens after a visitor submits?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: shortcode. */
+							__( 'Your choice under General > After submit. Default: a thank-you message, then back to the homepage after the number of seconds you set (0 keeps them on the message). Or redirect to a page on this site - click "Create a Thank-you page for me" and the plugin makes a published "Quote Submitted" page carrying the %s shortcode, which shows the confirmation and the quote reference. Or redirect to any URL you type. The analytics event is sent before the redirect in every mode (it needs JavaScript, like all browser analytics).', 'request-a-quote-for-woocommerce' ),
+							'<code>[raq_thank_you]</code>'
+						),
+					),
+					array(
+						__( 'Can I change the fields on the form?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: link to the Form tab. */
+							__( 'Yes, on the %s tab: add, remove, reorder and mark fields required. Name, company, email, phone and a message field are there by default; the phone field has a searchable country-code picker, and a Country field type with the WooCommerce country list is available. Attachments (allowed types and size limit) are switched on there too.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'form' ) ) . '">' . esc_html__( 'Form', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'Can I require visitors to log in first?', 'request-a-quote-for-woocommerce' ),
+						__( 'Yes - General > Login > "Require login to request a quote". A guest who clicks Add to Quote then sees a "Please log in" message instead, and a submitted form is refused. Off by default: most B2B sites want the request first and the account later.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Tracking (GA4)', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'What does the plugin track?', 'request-a-quote-for-woocommerce' ),
+						__( 'Two GA4 events, sent by the browser the moment each thing happens: add_to_quote when a product is added (parameter items, one entry with item_id = the product or variation id and quantity), and generate_lead when a quote request is submitted successfully (parameters lead_source = request_a_quote and method = quote_form). No value is sent with either, because prices are hidden and there is nothing honest to send. Nothing is tracked for a failed or spam submission.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Do I need Google Tag Manager?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: link to the Analytics tab. */
+							__( 'No. On the %s tab, paste the GA4 Measurement ID (G-XXXXXXXXXX) and the plugin loads GA4 itself and sends the events straight to it - no GTM, no extra code. If the site already runs GTM, leave the Measurement ID empty: the plugin then pushes the same events into the GTM dataLayer and you wire them up in GTM (next question). Set one or the other, never both, or events are counted twice.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'analytics' ) ) . '">' . esc_html__( 'Analytics', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'The site uses GTM - how do I pass the events to GA4?', 'request-a-quote-for-woocommerce' ),
+						__( 'In GTM: create a Custom Event trigger with the event name generate_lead, then a "Google Analytics: GA4 Event" tag with the event name generate_lead that fires on that trigger. Repeat for add_to_quote if you want it. Optional: Data Layer Variables named lead_source and method can be added as event parameters. Publish the container. Until it is published, nothing reaches GA4.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'How do I turn a quote request into a conversion (Key Event)?', 'request-a-quote-for-woocommerce' ),
+						__( 'In GA4: Admin > Data display > Events, find generate_lead and switch on "Mark as key event" (it appears in the list after the first submission arrives; to set it up before that, Admin > Data display > Key events > New key event > type generate_lead). Once marked, every quote request counts as a conversion in reports and can be imported into Google Ads as a conversion action.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'How do I check the events are really arriving?', 'request-a-quote-for-woocommerce' ),
+						__( 'Open GA4 > Admin > Data display > DebugView, then on the site (with the Google Analytics Debugger browser extension on, or GTM Preview mode) add a product to the quote and submit a request. add_to_quote and generate_lead should appear in DebugView within seconds, with their parameters. If they do not, see the troubleshooting question below.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Will a redirect after submit lose the event?', 'request-a-quote-for-woocommerce' ),
+						__( 'No. The plugin sends generate_lead first, waits for GA4 or GTM to confirm it has been handed off (or 300 ms at most), and only then leaves the page. The visitor sees a "sent, taking you to the next page" panel while that happens.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Can I use the thank-you page itself as a goal?', 'request-a-quote-for-woocommerce' ),
+						__( 'Yes: with "Redirect to a page" the thank-you page is a URL of its own, so it can be a Google Ads page-load conversion, or a GA4 key event of its own (Admin > Data display > Events > Create event, condition page_location contains the thank-you path, then mark that event). Do not also count that page view as generate_lead, or each request is counted twice. The event is the reliable signal (it fires in every mode); the page is a convenience.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Events are not showing up - what do I check?', 'request-a-quote-for-woocommerce' ),
+						__( 'In this order: GA4 tracking is ticked on the Analytics tab; the Measurement ID has no typo (or, on a GTM site, the container is published and the trigger name is exactly generate_lead); an ad blocker or a consent banner in "denied" state is not blocking the tag in your own browser; and you are looking at DebugView, not the standard reports, which lag by a day or two.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Working the quotes', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'Where do the requests go?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: 1: link to the Quotes list, 2: link to Analytics. */
+							__( '%1$s in WP Admin: one record per request with the customer details, the items and quantities, any attachment, and the page the request came from. Each quote has a status - New, Quoted, Won, Lost - which you move as the deal progresses; the %2$s screen reads those statuses back as a funnel, a 12-week trend, win rate, and the New quotes that have gone stale.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $quotes ) . '">' . esc_html__( 'Quotes', 'request-a-quote-for-woocommerce' ) . '</a>',
+							'<a href="' . esc_url( $analytics ) . '">' . esc_html__( 'Analytics', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'What is the RAQ-0001 number?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: link to the Advanced tab. */
+							__( 'The customer-facing reference, numbered automatically. It is on the quote, in the emails, and on the thank-you page. Change the prefix (or switch numbering off) on the %s tab. Keep the prefix to letters, digits and dashes.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'advanced' ) ) . '">' . esc_html__( 'Advanced', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'Can I get the quotes out as a spreadsheet?', 'request-a-quote-for-woocommerce' ),
+						__( 'Yes - the Export CSV button above the Quotes list downloads every quote, all statuses, with name, company, email, phone, country, the items and the source page.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Who gets emailed?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: link to the Emails tab. */
+							__( 'Two emails per request: one to the sales team (the addresses under %s > Sales recipient, or the site admin email if empty) with every detail, and a confirmation to the customer. Both are WooCommerce emails, so their subject, heading and template are edited under WooCommerce > Settings > Emails like any other - and a Recipient typed into the admin email\'s own settings there takes precedence over Sales recipient.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'emails' ) ) . '">' . esc_html__( 'Emails', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'How is spam kept out?', 'request-a-quote-for-woocommerce' ),
+						__( 'A honeypot field is always on: bots that fill it are rejected quietly. For more, add Google reCAPTCHA v3 site and secret keys under Form > Anti-spam; submissions scoring under 0.5 are rejected. reCAPTCHA v3 is invisible - there is no checkbox for real visitors.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Updates', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'Where do updates come from?', 'request-a-quote-for-woocommerce' ),
+						__( 'From the plugin\'s GitHub releases, published by Innovative Hub - not from wordpress.org. The site checks every 12 hours and a new version appears on the Plugins screen like any other update ("Check for updates" on the plugin row checks right now). Automatic installation is on by default.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Can I stop it updating on its own?', 'request-a-quote-for-woocommerce' ),
+						sprintf(
+							/* translators: %s: link to the Advanced tab. */
+							__( 'Yes - untick "Automatic updates" under %s > Updates. New versions are then still offered on the Plugins screen for you to install by hand. A developer can also force it from wp-config.php with define( \'RAQ_DISABLE_AUTO_UPDATE\', true ), which overrides the setting.', 'request-a-quote-for-woocommerce' ),
+							'<a href="' . esc_url( $tab( 'advanced' ) ) . '">' . esc_html__( 'Advanced', 'request-a-quote-for-woocommerce' ) . '</a>'
+						),
+					),
+					array(
+						__( 'The Plugins screen never offers an update on an old install', 'request-a-quote-for-woocommerce' ),
+						__( 'Versions before 1.0.5 had no update checker at all. Upload the latest zip once (Plugins > Add New > Upload Plugin > "Replace current with uploaded"); from then on the site updates itself.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Troubleshooting', 'request-a-quote-for-woocommerce' ),
+				'items' => array(
+					array(
+						__( 'Prices or Add to Cart buttons are still showing', 'request-a-quote-for-woocommerce' ),
+						__( 'Check the Master Switch is on, then clear the site\'s page cache (caching plugin, host cache, CDN) - the old page is usually a cached copy. A theme that prints prices with its own code, bypassing WooCommerce\'s price functions, needs a small theme fix.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'The drawer shows someone else\'s items', 'request-a-quote-for-woocommerce' ),
+						__( 'A page cache served another visitor\'s copy of the page. Versions from 1.0.3 print an empty drawer into the page and fill it per visitor after load, so update the plugin; if it persists, exclude the Quote Page from the cache.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Real visitors say the form will not submit', 'request-a-quote-for-woocommerce' ),
+						__( 'Most often a reCAPTCHA key pair from a different site or type (it must be v3), or a browser auto-fill writing into the hidden honeypot field. Remove the reCAPTCHA keys to confirm, then fix the keys.', 'request-a-quote-for-woocommerce' ),
+					),
+					array(
+						__( 'Where do I report a bug or ask for a feature?', 'request-a-quote-for-woocommerce' ),
+						__( 'To Innovative Hub - note the site, what you did, what you expected and what happened, plus the plugin version from the Plugins screen. Feature requests are collected the same way and decided together.', 'request-a-quote-for-woocommerce' ),
+					),
+				),
+			),
+		);
+
+		?>
+		<style>
+			.raq-guide{max-width:820px}
+			.raq-guide h2{font-size:15px;margin:26px 0 6px}
+			.raq-guide details{border-bottom:1px solid #dcdcde;padding:9px 0}
+			.raq-guide summary{cursor:pointer;font-weight:600;color:#1d2327}
+			.raq-guide summary:hover{color:#2271b1}
+			.raq-guide details p{margin:8px 0 2px;color:#3c434a;line-height:1.55}
+			.raq-guide code{font-size:12px}
+		</style>
+		<div class="raq-guide">
+			<p class="description"><?php esc_html_e( 'How this plugin works and how to get the most from it. Click a question to open the answer.', 'request-a-quote-for-woocommerce' ); ?></p>
+			<?php foreach ( $sections as $section ) : ?>
+				<h2><?php echo esc_html( $section['title'] ); ?></h2>
+				<?php foreach ( $section['items'] as $qa ) : ?>
+					<details>
+						<summary><?php echo esc_html( $qa[0] ); ?></summary>
+						<p><?php echo wp_kses( $qa[1], array( 'a' => array( 'href' => array() ), 'code' => array() ) ); ?></p>
+					</details>
+				<?php endforeach; ?>
+			<?php endforeach; ?>
+		</div>
 		<?php
 	}
 
@@ -683,6 +947,9 @@ class RAQ_Settings_Page {
 				$settings['auto_numbering']     = ! empty( $_POST['auto_numbering'] );
 				$settings['number_prefix']      = isset( $_POST['number_prefix'] ) ? sanitize_text_field( wp_unslash( $_POST['number_prefix'] ) ) : 'RAQ-';
 				$settings['purge_on_uninstall'] = ! empty( $_POST['purge_on_uninstall'] );
+				if ( ! defined( 'RAQ_DISABLE_AUTO_UPDATE' ) ) { // The switch is not rendered when the constant rules; keep the saved value.
+					$settings['auto_update'] = ! empty( $_POST['auto_update'] );
+				}
 				break;
 		}
 

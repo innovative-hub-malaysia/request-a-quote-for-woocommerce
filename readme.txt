@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.4
 WC requires at least: 6.0
 WC tested up to: 9.9
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,6 +33,19 @@ Ground rules:
 Built once, deployable to any no-price B2B store.
 
 == Changelog ==
+
+= 1.3.0 =
+* Guide tab (Quotes > Settings > Guide): a plain-language FAQ for whoever runs
+  the site - setup, the two submission modes, what happens after submit,
+  working the quotes, updates, troubleshooting, and a full section on GA4
+  tracking: which events fire (add_to_quote, generate_lead) and with what,
+  Measurement ID vs GTM, wiring the GTM trigger, marking generate_lead as a
+  Key Event, verifying in DebugView, and what to check when events are missing.
+* "FAQ" link on the plugin row (next to "Check for updates") opens the Guide.
+* Automatic updates can be switched off per site under Settings > Advanced >
+  Updates (on by default). When off, new versions are still offered on the
+  Plugins screen for a manual update. RAQ_DISABLE_AUTO_UPDATE in wp-config.php
+  still overrides the setting either way.
 
 = 1.2.0 =
 * Choose what happens after a quote is submitted (Quotes > Settings > General

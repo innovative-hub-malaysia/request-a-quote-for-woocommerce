@@ -51,8 +51,9 @@ Website: https://www.innovativehub.com.my/
 
 Installed sites update themselves from this repository's GitHub Releases
 (bundled `lib/plugin-update-checker`): the Plugins screen shows the update and
-auto-updates are on by default - define `RAQ_DISABLE_AUTO_UPDATE` as `true` in
-`wp-config.php` to opt a site out. Sites on 1.0.4 or earlier need one manual
+auto-updates are on by default. Switch them off per site under Quotes > Settings >
+Advanced > Updates, or force it with `RAQ_DISABLE_AUTO_UPDATE` (`true` = off,
+`false` = forced on) in `wp-config.php`, which overrides the setting. Sites on 1.0.4 or earlier need one manual
 upload of a newer version first.
 
 To ship a version: bump `Version:` + `RAQ_VERSION` + `Stable tag` (all three
