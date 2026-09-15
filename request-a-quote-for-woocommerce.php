@@ -3,7 +3,7 @@
  * Plugin Name:       Request a Quote for WooCommerce
  * Plugin URI:        https://www.innovativehub.com.my/
  * Description:       Turn a WooCommerce store into a B2B request-a-quote catalogue: hide prices, add an Add-to-Quote flow, and manage quote requests from the backend.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Innovative Hub
@@ -25,7 +25,7 @@ if ( defined( 'RAQ_VERSION' ) ) {
 	return;
 }
 
-define( 'RAQ_VERSION', '1.1.0' );
+define( 'RAQ_VERSION', '1.2.0' );
 define( 'RAQ_PLUGIN_FILE', __FILE__ );
 define( 'RAQ_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RAQ_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

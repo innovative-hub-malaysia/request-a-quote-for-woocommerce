@@ -85,7 +85,9 @@ class RAQ_Frontend {
 				'buttonLabel'   => self::button_label_text(),
 				'recaptchaSite' => $recaptcha_site,
 				'homeUrl'       => home_url( '/' ),
-				'redirectSecs'  => 5,
+				'afterSubmit'   => self::after_submit_mode(),
+				'redirectUrl'   => self::redirect_target(),
+				'redirectSecs'  => (int) RAQ_Settings::get( 'redirect_delay', 5 ),
 				'ga4'           => array(
 					'enabled'       => (bool) RAQ_Settings::get( 'ga4_enabled', true ),
 					'measurementId' => RAQ_Settings::get( 'ga4_measurement_id', '' ),
@@ -97,9 +99,12 @@ class RAQ_Frontend {
 					'chooseOpts' => __( 'Please choose the product options first.', 'request-a-quote-for-woocommerce' ),
 					'sending'    => __( 'Sending...', 'request-a-quote-for-woocommerce' ),
 					'thankTitle' => __( 'Thank you!', 'request-a-quote-for-woocommerce' ),
-					'redirecting' => __( 'Redirecting to the homepage in', 'request-a-quote-for-woocommerce' ),
+					'redirecting' => __( 'Returning to the homepage in', 'request-a-quote-for-woocommerce' ),
 					'seconds'    => __( 'seconds', 'request-a-quote-for-woocommerce' ),
 					'backHome'   => __( 'Back to homepage', 'request-a-quote-for-woocommerce' ),
+					'sent'       => __( 'Your quote request has been sent.', 'request-a-quote-for-woocommerce' ),
+					'takingYou'  => __( 'One moment, taking you to the next page...', 'request-a-quote-for-woocommerce' ),
+					'continueBtn' => __( 'Continue', 'request-a-quote-for-woocommerce' ),
 					'chooseRequired' => __( 'Please complete the required fields.', 'request-a-quote-for-woocommerce' ),
 				),
 			)
@@ -172,6 +177,49 @@ class RAQ_Frontend {
 		}
 
 		return $css;
+	}
+
+	/**
+	 * The After-submit mode, validated. A 'page' mode whose page is gone (or
+	 * a 'url' mode with no URL) degrades to 'countdown' so the visitor is never
+	 * sent nowhere.
+	 *
+	 * @return string countdown|page|url
+	 */
+	public static function after_submit_mode() {
+		$mode = RAQ_Settings::get( 'after_submit', 'countdown' );
+		if ( 'page' === $mode ) {
+			$page_id = (int) RAQ_Settings::get( 'redirect_page_id', 0 );
+			return ( $page_id && 'publish' === get_post_status( $page_id ) ) ? 'page' : 'countdown';
+		}
+		if ( 'url' === $mode ) {
+			return '' !== (string) RAQ_Settings::get( 'redirect_url', '' ) ? 'url' : 'countdown';
+		}
+		return 'countdown';
+	}
+
+	/**
+	 * Where a successful submission goes, for the mode after_submit_mode()
+	 * resolved to. Countdown mode returns the homepage (its "Back" target).
+	 *
+	 * @param string $reference Optional quote reference, appended as ?raq_ref=
+	 *                          in 'page' mode only (a custom URL is left as
+	 *                          the admin typed it).
+	 * @return string
+	 */
+	public static function redirect_target( $reference = '' ) {
+		$mode = self::after_submit_mode();
+		if ( 'page' === $mode ) {
+			$url = get_permalink( (int) RAQ_Settings::get( 'redirect_page_id', 0 ) );
+			if ( $url ) {
+				// add_query_arg() does not encode values - do it here.
+				return $reference ? add_query_arg( 'raq_ref', rawurlencode( $reference ), $url ) : $url;
+			}
+		}
+		if ( 'url' === $mode ) {
+			return (string) RAQ_Settings::get( 'redirect_url', '' );
+		}
+		return home_url( '/' );
 	}
 
 	/**

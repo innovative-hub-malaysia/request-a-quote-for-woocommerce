@@ -2,7 +2,8 @@
  * Request a Quote - front-end behaviour.
  *
  * Wires the (Stage 1) Add-to-Quote buttons to the quote list: AJAX add,
- * the mini-cart drawer, qty/remove, and the GA4 add_to_quote event.
+ * the mini-cart drawer, qty/remove, the GA4 events, and where a submitted
+ * form goes next (countdown home / a page / a URL - Quotes > Settings).
  *
  * Depends on jQuery (WooCommerce ships it) and the localised `raqData`.
  */
@@ -72,20 +73,48 @@
 		}, 2600 );
 	}
 
-	function fireGA4( eventName, params ) {
+	// `done` (optional) is called once the event has been handed off - gtag's
+	// event_callback / GTM's eventCallback - or after `timeout` ms, whichever
+	// comes first, and never more than once. A page that navigates away the
+	// instant it fires an event can lose the hit; the redirect waits on this.
+	function fireGA4( eventName, params, done, timeout ) {
+		var finished = false;
+		var timer    = null;
+		function finish() {
+			if ( finished ) {
+				return;
+			}
+			finished = true;
+			window.clearTimeout( timer );
+			if ( typeof done === 'function' ) {
+				done();
+			}
+		}
 		if ( ! cfg.ga4 || ! cfg.ga4.enabled ) {
+			finish();
 			return;
 		}
-		params = params || {};
+		params = $.extend( {}, params || {} );
+		var waiting = typeof done === 'function';
+		if ( waiting ) {
+			timeout = timeout || 300;
+			timer   = window.setTimeout( finish, timeout );
+		}
+		// The callback keys are added only on the branch that reads them, so
+		// neither ends up as a stray event parameter in GA4.
+		var gtagParams = waiting ? $.extend( { event_callback: finish, event_timeout: timeout }, params ) : params;
+		var dlParams   = waiting ? $.extend( { eventCallback: finish, eventTimeout: timeout }, params ) : params;
 		// When we configured a Measurement ID we loaded gtag ourselves - go
 		// through gtag('event', ...) (pushing {event} to gtag's dataLayer would
 		// not register). Otherwise ride the site's existing GTM dataLayer.
 		if ( cfg.ga4.measurementId && typeof window.gtag === 'function' ) {
-			window.gtag( 'event', eventName, params );
+			window.gtag( 'event', eventName, gtagParams );
 		} else if ( window.dataLayer && typeof window.dataLayer.push === 'function' ) {
-			window.dataLayer.push( $.extend( { event: eventName }, params ) );
+			window.dataLayer.push( $.extend( { event: eventName }, dlParams ) );
 		} else if ( typeof window.gtag === 'function' ) {
-			window.gtag( 'event', eventName, params );
+			window.gtag( 'event', eventName, gtagParams );
+		} else {
+			finish();
 		}
 	}
 
@@ -276,22 +305,33 @@
 		return dfd.promise();
 	}
 
-	// Replace the form with a thank-you panel that counts down and redirects
-	// to the homepage (plus a manual "Back to homepage" button).
-	function showThankYou( $form, message ) {
-		var secs = parseInt( cfg.redirectSecs, 10 ) || 5;
-		var check =
-			'<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+	var CHECK_SVG =
+		'<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+
+	// Countdown mode (the default): replace the form with a thank-you panel
+	// that counts down and returns to the homepage, plus a manual button.
+	// 0 seconds = stay on the panel.
+	function showThankYouCountdown( $form, message ) {
+		var secs = parseInt( cfg.redirectSecs, 10 );
+		if ( isNaN( secs ) || secs < 0 ) {
+			secs = 5;
+		}
+		var count = secs > 0
+			? '<p class="raq-thankyou__count">' + cfg.i18n.redirecting + ' <span class="raq-countdown">' + secs + '</span> ' + cfg.i18n.seconds + '</p>'
+			: '';
 		var html =
-			'<div class="raq-thankyou">' +
-			'<div class="raq-thankyou__icon">' + check + '</div>' +
+			'<div class="raq-thankyou" role="status" tabindex="-1">' +
+			'<div class="raq-thankyou__icon">' + CHECK_SVG + '</div>' +
 			'<h3>' + cfg.i18n.thankTitle + '</h3>' +
 			'<p>' + ( message || '' ) + '</p>' +
-			'<p class="raq-thankyou__count">' + cfg.i18n.redirecting + ' <span class="raq-countdown">' + secs + '</span> ' + cfg.i18n.seconds + '</p>' +
-			'<a href="' + cfg.homeUrl + '" class="raq-request-quote raq-home-btn">' + cfg.i18n.backHome + '</a>' +
+			count +
 			'</div>';
-		$form.replaceWith( html );
+		var $panel = $( html ).append( linkButton( cfg.homeUrl, cfg.i18n.backHome ) );
+		swapIn( $form, $panel );
 
+		if ( secs <= 0 ) {
+			return;
+		}
 		var n = secs;
 		var timer = window.setInterval( function () {
 			n--;
@@ -302,6 +342,58 @@
 			}
 		}, 1000 );
 	}
+
+	// Redirect modes (page / url): the form becomes a "sent, taking you there"
+	// panel with a spinner the moment the server confirms, so the visitor is
+	// never left staring at a disabled button while the analytics hit is
+	// handed off and the next page loads. A Continue link covers a stalled
+	// navigation (slow network, a blocked script).
+	function showThankYouRedirect( $form, target ) {
+		var html =
+			'<div class="raq-thankyou raq-thankyou--redirect" role="status" tabindex="-1">' +
+			'<div class="raq-thankyou__icon">' + CHECK_SVG + '</div>' +
+			'<h3>' + cfg.i18n.thankTitle + '</h3>' +
+			'<p>' + cfg.i18n.sent + '</p>' +
+			'<p class="raq-thankyou__wait"><span class="raq-spinner" aria-hidden="true"></span> ' + cfg.i18n.takingYou + '</p>' +
+			'</div>';
+		var $panel = $( html ).append( linkButton( target, cfg.i18n.continueBtn ) );
+		swapIn( $form, $panel );
+	}
+
+	// Replace the form with a panel and move focus onto it: the focused submit
+	// button is being removed, and without this a keyboard or screen-reader
+	// user is dropped onto <body> with no position and no announcement.
+	function swapIn( $form, $panel ) {
+		$form.replaceWith( $panel );
+		$panel.trigger( 'focus' );
+	}
+
+	// A panel button built via attributes, never string-concatenated: the
+	// target URL carries the quote reference, which an admin-set prefix shapes.
+	function linkButton( href, label ) {
+		return $( '<a>', { href: href, 'class': 'raq-request-quote raq-home-btn' } ).text( label );
+	}
+
+	// Fill the reference slot on a [raq_thank_you] page from ?raq_ref=. Done
+	// client-side so the reference never enters cacheable HTML.
+	function fillThankYouRef() {
+		var $slot = $( '.raq-thankyou--page .raq-thankyou__ref' );
+		if ( ! $slot.length ) {
+			return;
+		}
+		var m = /[?&]raq_ref=([^&#]*)/.exec( window.location.search );
+		var ref = '';
+		try {
+			ref = m ? decodeURIComponent( m[ 1 ].replace( /\+/g, ' ' ) ) : '';
+		} catch ( e ) {
+			return;
+		}
+		if ( ref && /^[\w .-]{1,40}$/.test( ref ) ) {
+			$slot.find( 'strong' ).text( ref );
+			$slot.prop( 'hidden', false );
+		}
+	}
+	$( fillThankYouRef );
 
 	function submitForm( $form ) {
 		var $msg = $form.find( '.raq-form__msg' );
@@ -340,18 +432,28 @@
 			} )
 				.done( function ( res ) {
 					if ( res && res.success ) {
-						// quote_submitted mapped to the GA4 standard generate_lead
-						// (the Key Event / conversion), consistent with our other
-						// IH lead sources. Prices are hidden, so no value is sent.
-						fireGA4( 'generate_lead', {
-							lead_source: 'request_a_quote',
-							method: 'quote_form',
-						} );
 						setCount( res.data.count || 0 );
 						if ( res.data.drawer ) {
 							paintDrawer( res.data.drawer );
 						}
-						showThankYou( $form, res.data.message );
+						// quote_submitted mapped to the GA4 standard generate_lead
+						// (the Key Event / conversion), consistent with our other
+						// IH lead sources. Prices are hidden, so no value is sent.
+						var lead = { lead_source: 'request_a_quote', method: 'quote_form' };
+						// The server resolves mode + destination per submit (it
+						// knows the reference, and it is never page-cached); the
+						// localized values are the fallback.
+						var mode = res.data.after || cfg.afterSubmit || 'countdown';
+						var target = ( res.data.redirect && String( res.data.redirect ) ) || cfg.redirectUrl || cfg.homeUrl;
+						if ( mode === 'page' || mode === 'url' ) {
+							showThankYouRedirect( $form, target );
+							fireGA4( 'generate_lead', lead, function () {
+								window.location.href = target;
+							} );
+						} else {
+							fireGA4( 'generate_lead', lead );
+							showThankYouCountdown( $form, res.data.message );
+						}
 					} else {
 						var m = res && res.data && res.data.message ? res.data.message : cfg.i18n.error;
 						$msg.addClass( 'raq-form__msg--error' ).text( m );

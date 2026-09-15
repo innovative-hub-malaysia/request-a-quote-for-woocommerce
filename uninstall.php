@@ -37,4 +37,6 @@ foreach ( $raq_quotes as $raq_quote_id ) {
 
 // Remove our options.
 delete_option( 'raq_settings' );
+delete_option( 'raq_thankyou_page_id' );
+delete_option( 'raq_quote_counter' );
 delete_option( 'raq_version' );

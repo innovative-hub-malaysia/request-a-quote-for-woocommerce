@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.4
 WC requires at least: 6.0
 WC tested up to: 9.9
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,6 +33,28 @@ Ground rules:
 Built once, deployable to any no-price B2B store.
 
 == Changelog ==
+
+= 1.2.0 =
+* Choose what happens after a quote is submitted (Quotes > Settings > General
+  > After submit): show the thank-you message and return to the homepage
+  after N seconds (the default, unchanged from before; 0 = stay), redirect to
+  a page on this site, or redirect to a custom URL. Applies to the Quote Page
+  form and the drawer form alike.
+* "Create a Thank-you page for me" builds a published "Quote Submitted" page
+  carrying the new [raq_thank_you] shortcode and selects it. The shortcode
+  renders the confirmation panel and, when the URL carries ?raq_ref=, the
+  quote reference - filled in by the browser so nothing per-visitor is ever
+  written into cacheable HTML.
+* The generate_lead analytics event is handed off before the browser leaves
+  the page in every mode (gtag event_callback / GTM eventCallback, 300 ms
+  cap), and the form turns into a "sent, taking you there" panel with a
+  spinner and a Continue link the moment the server confirms.
+* The no-JavaScript fallback follows the same setting; an off-site custom
+  URL is not followed there and goes to the homepage.
+* Fixed: in the drawer form, the thank-you panel's button was greyed out and
+  unclickable (the empty-list CTA rule caught it). Focus now moves onto the
+  thank-you panel when the form is replaced, so keyboard and screen-reader
+  users are not dropped.
 
 = 1.1.0 =
 * The Country field and the phone country-code picker are now searchable: open

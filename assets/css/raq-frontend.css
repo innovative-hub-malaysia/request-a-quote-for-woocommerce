@@ -678,8 +678,9 @@
 	text-align: right;
 }
 
-/* Greyed CTA when the quote list is empty */
-.raq-drawer.is-empty .raq-request-quote,
+/* Greyed CTA when the quote list is empty. The thank-you panel's buttons are
+   exempt: the list is empty precisely because the quote was just sent. */
+.raq-drawer.is-empty .raq-request-quote:not(.raq-home-btn),
 .raq-drawer.is-empty .raq-submit {
 	background: #c7cbd2 !important;
 	border-color: #c7cbd2 !important;
@@ -741,6 +742,10 @@
 	margin: 0 auto;
 }
 
+.raq-thankyou:focus {
+	outline: none;
+}
+
 .raq-thankyou__icon {
 	color: var(--raq-accent);
 	margin-bottom: 8px;
@@ -770,6 +775,38 @@
 .raq-thankyou .raq-home-btn {
 	display: inline-flex;
 	margin-top: 14px;
+}
+
+/* Redirect modes: the "taking you there" wait line + spinner. */
+.raq-thankyou__wait {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	font-size: 14px;
+}
+
+.raq-spinner {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--raq-line, #d9d5cf);
+	border-top-color: var(--raq-accent);
+	border-radius: 50%;
+	animation: raq-spin 0.8s linear infinite;
+}
+
+@keyframes raq-spin {
+	to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.raq-spinner { animation-duration: 2s; }
+}
+
+/* [raq_thank_you] on a redirect target page. */
+.raq-thankyou--page .raq-thankyou__ref strong {
+	color: var(--raq-ink);
 }
 
 /* ---------------------------------------------------------------- *

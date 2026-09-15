@@ -149,11 +149,15 @@ class RAQ_Ajax {
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
+		$reference = (string) get_post_meta( (int) $result, '_raq_reference', true );
 		wp_send_json_success(
 			array(
-				'message' => __( 'Thank you - your quote request has been sent. We will get back to you shortly.', 'request-a-quote-for-woocommerce' ),
-				'count'   => RAQ_Quote_List::get_count(),
-				'drawer'  => RAQ_Frontend::drawer_body_html(),
+				'message'   => __( 'Thank you - your quote request has been sent. We will get back to you shortly.', 'request-a-quote-for-woocommerce' ),
+				'count'     => RAQ_Quote_List::get_count(),
+				'drawer'    => RAQ_Frontend::drawer_body_html(),
+				'reference' => $reference,
+				'after'     => RAQ_Frontend::after_submit_mode(),
+				'redirect'  => RAQ_Frontend::redirect_target( $reference ),
 			)
 		);
 	}

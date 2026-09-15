@@ -48,6 +48,14 @@ class RAQ_Submission {
 
 		if ( is_wp_error( $result ) ) {
 			$redirect = add_query_arg( 'raq_error', rawurlencode( $result->get_error_message() ), $redirect );
+		} elseif ( 'countdown' !== RAQ_Frontend::after_submit_mode() ) {
+			// Same destination the JS path uses. An off-site custom URL is not
+			// followed here: wp_validate_redirect() sends it home instead
+			// (wp_safe_redirect() alone would fall back to wp-admin).
+			$redirect = wp_validate_redirect(
+				RAQ_Frontend::redirect_target( (string) get_post_meta( (int) $result, '_raq_reference', true ) ),
+				home_url( '/' )
+			);
 		} else {
 			$redirect = add_query_arg( 'raq_success', 1, $redirect );
 		}

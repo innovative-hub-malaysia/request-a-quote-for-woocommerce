@@ -54,5 +54,25 @@
 			$( document ).on( 'change', 'input[name="submit_mode"]', toggleModeRows );
 			toggleModeRows();
 		}
+
+		// Same for the After-submit choice: only the rows for the chosen
+		// destination are shown.
+		function toggleAfterRows() {
+			var after = $( 'input[name="after_submit"]:checked' ).val() || 'countdown';
+			$( '.raq-when-after-countdown' ).toggle( after === 'countdown' );
+			$( '.raq-when-after-page' ).toggle( after === 'page' );
+			$( '.raq-when-after-url' ).toggle( after === 'url' );
+		}
+		if ( $( 'input[name="after_submit"]' ).length ) {
+			$( document ).on( 'change', 'input[name="after_submit"]', toggleAfterRows );
+			toggleAfterRows();
+		}
+
+		// "Create a Thank-you page for me" leaves the form, so confirm first.
+		$( document ).on( 'click', '.raq-create-thankyou', function ( e ) {
+			if ( ! window.confirm( $( this ).data( 'confirm' ) ) ) {
+				e.preventDefault();
+			}
+		} );
 	} );
 } )( jQuery );

@@ -31,6 +31,7 @@ class RAQ_Settings_Page {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_menu' ), 60 );
 		add_action( 'admin_post_raq_save_settings', array( __CLASS__, 'handle_save' ) );
+		add_action( 'admin_post_raq_create_thankyou', array( __CLASS__, 'handle_create_thankyou' ) );
 		add_filter( 'plugin_action_links_' . RAQ_PLUGIN_BASENAME, array( __CLASS__, 'action_links' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 	}
@@ -135,6 +136,15 @@ class RAQ_Settings_Page {
 			<?php if ( isset( $_GET['raq_saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only flash flag. ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'request-a-quote-for-woocommerce' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['raq_thankyou'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only flash flag. ?>
+				<?php if ( 'created' === $_GET['raq_thankyou'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Thank-you page created and selected. Edit its wording under Pages whenever you like.', 'request-a-quote-for-woocommerce' ); ?></p></div>
+				<?php elseif ( 'reselected' === $_GET['raq_thankyou'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+					<div class="notice notice-info is-dismissible"><p><?php esc_html_e( 'Your existing Thank-you page is still published, so it was selected again rather than created twice.', 'request-a-quote-for-woocommerce' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'The Thank-you page could not be created.', 'request-a-quote-for-woocommerce' ); ?></p></div>
+				<?php endif; ?>
+			<?php endif; ?>
 
 			<h2 class="nav-tab-wrapper">
 				<?php foreach ( $tabs as $key => $label ) : ?>
@@ -221,6 +231,52 @@ class RAQ_Settings_Page {
 				<td>
 					<label><input type="radio" name="submit_mode" value="page" <?php checked( 'page', $s['submit_mode'] ); ?>> <?php esc_html_e( 'Route to the Quote Page (full form)', 'request-a-quote-for-woocommerce' ); ?></label><br>
 					<label><input type="radio" name="submit_mode" value="drawer" <?php checked( 'drawer', $s['submit_mode'] ); ?>> <?php esc_html_e( 'Submit inside the drawer (short form)', 'request-a-quote-for-woocommerce' ); ?></label>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'After submit', 'request-a-quote-for-woocommerce' ); ?></th>
+				<td>
+					<?php
+					$after      = isset( $s['after_submit'] ) ? $s['after_submit'] : 'countdown';
+					$create_url = wp_nonce_url( admin_url( 'admin-post.php?action=raq_create_thankyou' ), 'raq_create_thankyou' );
+					?>
+					<label><input type="radio" name="after_submit" value="countdown" <?php checked( 'countdown', $after ); ?>> <?php esc_html_e( 'Show a thank-you message, then return to the homepage', 'request-a-quote-for-woocommerce' ); ?></label><br>
+					<label><input type="radio" name="after_submit" value="page" <?php checked( 'page', $after ); ?>> <?php esc_html_e( 'Redirect to a page on this site', 'request-a-quote-for-woocommerce' ); ?></label><br>
+					<label><input type="radio" name="after_submit" value="url" <?php checked( 'url', $after ); ?>> <?php esc_html_e( 'Redirect to a custom URL', 'request-a-quote-for-woocommerce' ); ?></label>
+					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: event name. */ __( 'Applies to both the Quote Page form and the drawer form. The %s analytics event is sent before the redirect in every mode.', 'request-a-quote-for-woocommerce' ), 'generate_lead' ) ); ?></p>
+				</td>
+			</tr>
+			<tr class="raq-when-after-countdown">
+				<th scope="row"><label for="raq_redirect_delay"><?php esc_html_e( 'Return after', 'request-a-quote-for-woocommerce' ); ?></label></th>
+				<td>
+					<input type="number" id="raq_redirect_delay" class="small-text" name="redirect_delay" min="0" max="60" step="1" value="<?php echo esc_attr( (int) $s['redirect_delay'] ); ?>"> <?php esc_html_e( 'seconds', 'request-a-quote-for-woocommerce' ); ?>
+					<p class="description"><?php esc_html_e( '0 = stay on the thank-you message, no automatic return.', 'request-a-quote-for-woocommerce' ); ?></p>
+				</td>
+			</tr>
+			<tr class="raq-when-after-page">
+				<th scope="row"><label for="raq_redirect_page_id"><?php esc_html_e( 'Thank-you page', 'request-a-quote-for-woocommerce' ); ?></label></th>
+				<td>
+					<?php
+					wp_dropdown_pages(
+						array(
+							'name'              => 'redirect_page_id',
+							'id'                => 'raq_redirect_page_id',
+							'selected'          => (int) $s['redirect_page_id'],
+							'show_option_none'  => __( '- Select a page -', 'request-a-quote-for-woocommerce' ),
+							'option_none_value' => '0',
+							'post_status'       => 'publish', // Anything else would degrade to the countdown silently.
+						)
+					);
+					?>
+					<a href="<?php echo esc_url( $create_url ); ?>" class="button raq-create-thankyou" data-confirm="<?php echo esc_attr__( 'This creates a new "Quote Submitted" page and selects it. Unsaved changes on this screen are discarded. Continue?', 'request-a-quote-for-woocommerce' ); ?>"><?php esc_html_e( 'Create a Thank-you page for me', 'request-a-quote-for-woocommerce' ); ?></a>
+					<p class="description"><?php echo esc_html( sprintf( /* translators: 1: shortcode, 2: query parameter. */ __( 'Any page works. Add the %1$s shortcode to show the confirmation panel and the quote reference (passed as %2$s).', 'request-a-quote-for-woocommerce' ), '[raq_thank_you]', '?raq_ref=' ) ); ?></p>
+				</td>
+			</tr>
+			<tr class="raq-when-after-url">
+				<th scope="row"><label for="raq_redirect_url"><?php esc_html_e( 'Redirect URL', 'request-a-quote-for-woocommerce' ); ?></label></th>
+				<td>
+					<input type="url" id="raq_redirect_url" class="regular-text" name="redirect_url" value="<?php echo esc_attr( $s['redirect_url'] ); ?>" placeholder="https://">
+					<p class="description"><?php esc_html_e( 'Full URL, https recommended. With JavaScript off, only a URL on this site is followed; anything else falls back to the homepage.', 'request-a-quote-for-woocommerce' ); ?></p>
 				</td>
 			</tr>
 			<tr class="raq-when-page">
@@ -585,6 +641,11 @@ class RAQ_Settings_Page {
 				$settings['add_to_quote_label'] = isset( $_POST['add_to_quote_label'] ) ? sanitize_text_field( wp_unslash( $_POST['add_to_quote_label'] ) ) : '';
 				$settings['submit_mode']        = ( isset( $_POST['submit_mode'] ) && 'drawer' === $_POST['submit_mode'] ) ? 'drawer' : 'page';
 				$settings['require_login']      = ! empty( $_POST['require_login'] );
+				$after                          = isset( $_POST['after_submit'] ) ? sanitize_key( wp_unslash( $_POST['after_submit'] ) ) : 'countdown';
+				$settings['after_submit']       = in_array( $after, array( 'countdown', 'page', 'url' ), true ) ? $after : 'countdown';
+				$settings['redirect_page_id']   = isset( $_POST['redirect_page_id'] ) ? absint( $_POST['redirect_page_id'] ) : 0;
+				$settings['redirect_url']       = isset( $_POST['redirect_url'] ) ? self::sanitize_redirect_url( wp_unslash( $_POST['redirect_url'] ) ) : '';
+				$settings['redirect_delay']     = isset( $_POST['redirect_delay'] ) ? min( 60, absint( $_POST['redirect_delay'] ) ) : 5;
 				$settings['page_title']         = isset( $_POST['page_title'] ) ? sanitize_text_field( wp_unslash( $_POST['page_title'] ) ) : '';
 				$settings['page_intro']         = isset( $_POST['page_intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['page_intro'] ) ) : '';
 
@@ -638,6 +699,74 @@ class RAQ_Settings_Page {
 		);
 		wp_safe_redirect( $redirect );
 		exit;
+	}
+
+	/**
+	 * "Create a Thank-you page for me": insert a published page carrying the
+	 * `[raq_thank_you]` shortcode, point the After-submit setting at it, and
+	 * come back to the General tab. Never creates a second one - if the page
+	 * from an earlier click is still published it is simply re-selected (a
+	 * draft/trashed one would silently degrade the redirect, so it is replaced).
+	 */
+	public static function handle_create_thankyou() {
+		if ( ! current_user_can( self::CAP ) || ! current_user_can( 'publish_pages' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'request-a-quote-for-woocommerce' ) );
+		}
+		check_admin_referer( 'raq_create_thankyou' );
+
+		$settings = RAQ_Settings::all();
+		$page_id  = (int) get_option( 'raq_thankyou_page_id', 0 );
+		$outcome  = 'reselected';
+
+		if ( ! $page_id || 'publish' !== get_post_status( $page_id ) ) {
+			$outcome = 'created';
+			$page_id = wp_insert_post(
+				array(
+					'post_type'    => 'page',
+					'post_status'  => 'publish',
+					'post_title'   => __( 'Quote Submitted', 'request-a-quote-for-woocommerce' ),
+					'post_name'    => 'quote-submitted',
+					'post_content' => '[raq_thank_you]',
+				),
+				true
+			);
+			if ( is_wp_error( $page_id ) || ! $page_id ) {
+				$page_id = 0;
+			} else {
+				update_option( 'raq_thankyou_page_id', (int) $page_id );
+			}
+		}
+
+		if ( $page_id ) {
+			$settings['after_submit']     = 'page';
+			$settings['redirect_page_id'] = (int) $page_id;
+			RAQ_Settings::save( $settings );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'post_type'    => RAQ_CPT::POST_TYPE,
+					'page'         => 'raq-settings',
+					'tab'          => 'general',
+					'raq_thankyou' => $page_id ? $outcome : 'failed',
+				),
+				admin_url( 'edit.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * A redirect URL: http(s) only, otherwise empty (the front end then falls
+	 * back to the homepage rather than following javascript:/data: etc.).
+	 *
+	 * @param string $raw Submitted value.
+	 * @return string
+	 */
+	protected static function sanitize_redirect_url( $raw ) {
+		$url = esc_url_raw( trim( (string) $raw ), array( 'http', 'https' ) );
+		return $url ? $url : '';
 	}
 
 	/**

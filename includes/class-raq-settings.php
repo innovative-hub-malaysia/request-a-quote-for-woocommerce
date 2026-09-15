@@ -53,6 +53,16 @@ class RAQ_Settings {
 			// Default B2B field set. Admin can add / remove / reorder later.
 			'fields'               => self::default_fields(),
 
+			// --- After submit --------------------------------------------.
+			// 'countdown' = thank-you panel in place, counts down, then home
+			// (the pre-1.2.0 behaviour - the default so an auto-update never
+			// changes an installed site). 'page' = a chosen page, 'url' = any
+			// same-site or external URL. Delay applies to 'countdown' only.
+			'after_submit'         => 'countdown',
+			'redirect_page_id'     => 0,
+			'redirect_url'         => '',
+			'redirect_delay'       => 5,
+
 			// --- Attachments ---------------------------------------------.
 			'attachments_enabled'  => false,
 			'attachments_types'    => 'pdf,jpg,jpeg,png,doc,docx,xls,xlsx',

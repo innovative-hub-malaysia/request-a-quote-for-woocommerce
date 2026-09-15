@@ -21,6 +21,7 @@ class RAQ_Form {
 	 */
 	public static function init() {
 		add_shortcode( 'raq_quote_form', array( __CLASS__, 'shortcode' ) );
+		add_shortcode( 'raq_thank_you', array( __CLASS__, 'shortcode_thank_you' ) );
 	}
 
 	/**
@@ -68,6 +69,38 @@ class RAQ_Form {
 		echo '</div>';
 
 		return ob_get_clean();
+	}
+
+	/**
+	 * `[raq_thank_you]` - the confirmation panel for a redirect target page.
+	 *
+	 * Static markup on purpose: the quote reference arrives as ?raq_ref= and is
+	 * filled in by raq-frontend.js from the address bar, never rendered here,
+	 * so a page cache that ignores query strings can only ever cache an empty
+	 * slot (the 1.0.3 lesson - nothing per-visitor goes into cached HTML).
+	 *
+	 * @param array $atts Shortcode attributes: title, message.
+	 * @return string
+	 */
+	public static function shortcode_thank_you( $atts = array() ) {
+		$atts = shortcode_atts(
+			array(
+				'title'   => __( 'Thank you!', 'request-a-quote-for-woocommerce' ),
+				'message' => __( 'Your quote request has been sent. We will get back to you shortly.', 'request-a-quote-for-woocommerce' ),
+			),
+			$atts,
+			'raq_thank_you'
+		);
+
+		$check = '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+
+		return '<div class="raq-thankyou raq-thankyou--page">'
+			. '<div class="raq-thankyou__icon">' . $check . '</div>'
+			. '<h3>' . esc_html( $atts['title'] ) . '</h3>'
+			. '<p>' . esc_html( $atts['message'] ) . '</p>'
+			. '<p class="raq-thankyou__ref" hidden>' . esc_html__( 'Your reference:', 'request-a-quote-for-woocommerce' ) . ' <strong></strong></p>'
+			. '<a href="' . esc_url( home_url( '/' ) ) . '" class="raq-request-quote raq-home-btn">' . esc_html__( 'Back to homepage', 'request-a-quote-for-woocommerce' ) . '</a>'
+			. '</div>';
 	}
 
 	/**

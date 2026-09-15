@@ -77,3 +77,31 @@ is up, before any client deploy. Tick each item.
 - [ ] **nginx** - add a deny rule for `uploads/raq-quotes/` (the `.htaccess` is
       Apache-only).
 - [ ] Confirm no PHP errors in `debug.log` across the whole flow.
+
+## After submit (1.2.0)
+
+Quotes > Settings > General > After submit. Test each with the Quote Page form
+AND the drawer form (Submission = "inside the drawer").
+
+- [ ] Default (fresh install / upgraded site): "Show a thank-you message, then
+      return to the homepage", 5 s - behaves exactly as 1.1.0 did.
+- [ ] Return after = 0 -> panel stays, no countdown line, Back button works.
+- [ ] "Redirect to a page": pick a page -> submit -> panel flips to the spinner
+      "taking you to the next page" instantly, then lands on the page with
+      `?raq_ref=RAQ-xxxx`; `[raq_thank_you]` on that page shows the reference.
+- [ ] "Create a Thank-you page for me" -> a published "Quote Submitted" page
+      appears under Pages, is selected, and a second click does NOT create
+      another one.
+- [ ] Chosen page trashed / set to draft -> submit falls back to the countdown
+      (never a 404).
+- [ ] "Redirect to a custom URL": an off-site https URL is followed in the
+      browser; the no-JS POST fallback lands on the homepage instead.
+- [ ] `javascript:` / `data:` pasted into Redirect URL is discarded on save.
+- [ ] GA4 DebugView (or GTM Preview): one `generate_lead` per submission in
+      every mode, none lost on the redirect, none duplicated on a refresh of
+      the thank-you page.
+- [ ] Throttle the network (DevTools "Slow 3G"): the spinner panel is visible
+      the whole time; Continue link works if clicked early.
+- [ ] Page-cached site: open the thank-you URL with two different `raq_ref`
+      values in a private window - each shows its own reference (filled by
+      JS, not cached).
