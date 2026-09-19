@@ -124,7 +124,7 @@
 
 	function readContext( $btn ) {
 		var ctx = {
-			product_id: parseInt( $btn.data( 'product_id' ), 10 ) || 0,
+			product_id: parseInt( $btn.data( 'product_id' ), 10 ) || parseInt( $btn.data( 'productId' ), 10 ) || 0,
 			variation_id: 0,
 			quantity: 1,
 			variation: {},
@@ -215,6 +215,11 @@
 
 	// Our own (loop) buttons.
 	$( document ).on( 'click', '.raq-add-to-quote', function ( e ) {
+		// Variable product on a list page has no options picker here - let the
+		// link carry the shopper to the product page to choose options.
+		if ( $( this ).hasClass( 'raq-needs-options' ) && this.getAttribute( 'href' ) ) {
+			return;
+		}
 		e.preventDefault();
 		sendAdd( $( this ) );
 	} );

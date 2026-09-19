@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.4
 WC requires at least: 6.0
 WC tested up to: 9.9
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,6 +33,13 @@ Ground rules:
 Built once, deployable to any no-price B2B store.
 
 == Changelog ==
+
+= 1.3.1 =
+* Fix: the "Add to Quote" button on shop, category and other product-list
+  pages did nothing. It printed a hyphenated data attribute the frontend
+  script did not read, so it resolved to no product and silently returned.
+  List-page and related-products buttons now add to the quote like the
+  single-product button. Present since 1.0.5.
 
 = 1.3.0 =
 * Guide tab (Quotes > Settings > Guide): a plain-language FAQ for whoever runs

@@ -115,9 +115,9 @@ class RAQ_Converter {
 			return;
 		}
 		printf(
-			'<a href="%1$s" class="button raq-add-to-quote %2$s" data-product-id="%3$d" data-product-type="%4$s" rel="nofollow">%5$s</a>',
+			'<a href="%1$s" class="button raq-add-to-quote %2$s" data-product_id="%3$d" data-product-type="%4$s" rel="nofollow">%5$s</a>',
 			esc_url( $product->get_permalink() ),
-			esc_attr( $product->is_type( 'variable' ) ? 'raq-needs-options' : '' ),
+			esc_attr( $product->is_type( 'simple' ) ? '' : 'raq-needs-options' ),
 			(int) $product->get_id(),
 			esc_attr( $product->get_type() ),
 			esc_html( self::button_label() )

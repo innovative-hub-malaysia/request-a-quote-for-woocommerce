@@ -22,7 +22,10 @@ is up, before any client deploy. Tick each item.
 ## Front-end
 
 - [ ] Prices hidden on shop, category, single, widgets, related products.
-- [ ] Simple product add -> quote.
+- [ ] Simple product add -> quote **from the single-product page**.
+- [ ] **List-page "Add to Quote"** (shop grid, category archive, related-products row):
+      clicking a simple product's button adds it and fires the toast - not only the
+      single-product button. (Regression guard for the 1.3.1 data-attribute fix.)
 - [ ] **Variable product**: attributes selectable, button appears after choosing,
       correct variation captured.
 - [ ] Drawer: change qty, remove line, count updates, persists on reload (guest).

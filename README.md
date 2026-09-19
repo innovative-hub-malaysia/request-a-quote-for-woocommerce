@@ -117,15 +117,10 @@ Uploads are stored in `wp-content/uploads/raq-quotes/` with a deny `.htaccess`
 
 (c) Innovative Hub - https://www.innovativehub.com.my/
 
-## Known issues (open)
+## Known issues
 
-- **Archive "Add to Quote" buttons do nothing (found 2026-09-19 on itoliceramic.com, present since 1.0.5).**
-  `RAQ_Converter::render_loop_quote_button()` prints `data-product-id="…"`, but `readContext()` in
-  `assets/js/raq-frontend.js` reads `$btn.data('product_id')` (every other button uses
-  `data-product_id`). jQuery does not map the two, so the loop button resolves to product id 0 and
-  `sendAdd()` returns silently - no request, no toast. Category / shop grids and related-products
-  rows are affected on every site; single-product buttons (our own and the relabelled WooCommerce one,
-  which carries the id in `value`) work. Fix for the next release: print `data-product_id` in
-  `render_loop_quote_button()` AND read both spellings in `readContext()`; add a loop-button case to
-  QA-CHECKLIST.md (the 09-09 QC only exercised the single-product path). Not shipped yet on Lee's call
-  (2026-09-19: "我们今天不该 RAQ").
+- **FIXED in 1.3.1: archive "Add to Quote" buttons did nothing (present 1.0.5 - 1.3.0).**
+  `render_loop_quote_button()` printed `data-product-id` while `readContext()` read `data-product_id`,
+  so list-page buttons resolved to product id 0 and `sendAdd()` returned silently. 1.3.1 prints
+  `data-product_id` and `readContext()` reads both spellings (`product_id` then `productId`) so any
+  cached old markup still works. Verify on a category/shop grid, not just the single-product page.
